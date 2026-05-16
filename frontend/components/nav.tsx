@@ -34,6 +34,12 @@ export function Nav({ email }: NavProps) {
           >
             Forbindelser
           </Link>
+          <Link
+            href="/dashboard/mcp"
+            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          >
+            MCP
+          </Link>
           {email && (
             <span className="hidden text-sm text-neutral-500 sm:inline dark:text-neutral-400">
               {email}

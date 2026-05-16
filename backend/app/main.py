@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, health, ingestion, providers, training
+from app.routers import auth, health, ingestion, mcp_keys, providers, training
 
 settings = get_settings()
 
@@ -46,6 +46,7 @@ app.include_router(health.router)
 # Authenticated routes
 app.include_router(auth.router)
 app.include_router(ingestion.router)
+app.include_router(mcp_keys.router)
 app.include_router(providers.router)
 app.include_router(training.router)
 
