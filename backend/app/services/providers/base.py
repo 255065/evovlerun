@@ -86,28 +86,60 @@ class NormalizedDailyMetric:
     raw_payload: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class CredentialLoginResult:
+    """Result of a credential (username/password) login attempt.
+
+    Garmin and similar non-OAuth providers report MFA in two stages: the first
+    `login_with_credentials` call may return `needs_mfa=True` with a `pending_state`
+    that the caller stores, then `complete_credential_login(pending_state, mfa_code)`
+    finishes the flow.
+    """
+
+    tokens: ProviderTokens | None = None  # None if MFA still required
+    needs_mfa: bool = False
+    pending_state: str | None = None  # serialized so the next call can resume
+
+
 class ProviderClient(ABC):
     """Protocol every provider implements.
 
     Implementations should be cheap to construct — connection pooling, token
     refresh, etc. live inside the methods, not the constructor.
+
+    Auth model varies: OAuth providers (Strava) implement start_oauth +
+    complete_oauth. Credential-based providers (Garmin via garminconnect)
+    implement login_with_credentials + optionally complete_credential_login.
+    Unsupported methods raise NotImplementedError by default.
     """
 
     slug: str  # short id used in URLs and the oauth_connections.provider column
 
     # -- OAuth -------------------------------------------------------------
-    @abstractmethod
     def start_oauth(self, *, user_id: str, redirect_uri: str) -> OAuthFlowResult:
         """Begin OAuth. Returns the URL we should redirect the user to."""
-        raise NotImplementedError
+        raise NotImplementedError(f"{self.slug} does not support OAuth")
 
-    @abstractmethod
     async def complete_oauth(
         self, *, code: str, state: str, redirect_uri: str
     ) -> ProviderTokens:
         """Exchange the OAuth code for tokens."""
-        raise NotImplementedError
+        raise NotImplementedError(f"{self.slug} does not support OAuth")
 
+    # -- Credential login (non-OAuth providers) ----------------------------
+    async def login_with_credentials(
+        self, *, user_id: str, username: str, password: str
+    ) -> CredentialLoginResult:
+        """Authenticate with username/password. May return `needs_mfa=True`."""
+        raise NotImplementedError(f"{self.slug} does not support credential login")
+
+    async def complete_credential_login(
+        self, *, user_id: str, pending_state: str, mfa_code: str, username: str, password: str
+    ) -> ProviderTokens:
+        """Finish a 2FA-gated credential login by supplying the user's MFA code."""
+        raise NotImplementedError(f"{self.slug} does not support MFA completion")
+
+    # -- Token refresh -----------------------------------------------------
     @abstractmethod
     async def refresh(self, tokens: ProviderTokens) -> ProviderTokens:
         """Refresh an expired access token. May return the same bundle if no refresh needed."""

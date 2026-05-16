@@ -10,4 +10,5 @@ cryptography>=44
 python-jose[cryptography]>=3.3
 pytest>=8.3
 pytest-asyncio>=0.25
+garminconnect>=0.2.31
 

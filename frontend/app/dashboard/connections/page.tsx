@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,7 @@ type Provider = {
   name: string;
   desc: string;
   enabled: boolean;
+  authMode: "oauth" | "credentials";
   warning?: string;
 };
 
@@ -21,25 +23,29 @@ const PROVIDERS: Provider[] = [
     name: "Strava",
     desc: "Aktiviteter, splits, pace, HR, power, elevation. Officiel OAuth.",
     enabled: true,
+    authMode: "oauth",
   },
   {
     id: "garmin",
     name: "Garmin Connect",
-    desc: "Aktiviteter + sleep + HRV + body battery + readiness via uofficielt API.",
-    enabled: false,
-    warning: "Kommer snart — bruger uofficielt API (garth).",
+    desc: "Aktiviteter + sleep + HRV + body battery + readiness.",
+    enabled: true,
+    authMode: "credentials",
+    warning: "Uofficielt API — kan stoppe uden varsel. Vi anbefaler en dedikeret app-konto.",
   },
   {
     id: "oura",
     name: "Oura Ring",
     desc: "Sleep, HRV, readiness, body temperature.",
     enabled: false,
+    authMode: "oauth",
   },
   {
     id: "whoop",
     name: "Whoop",
     desc: "Recovery, strain, sleep, workouts.",
     enabled: false,
+    authMode: "oauth",
   },
 ];
 
@@ -129,6 +135,10 @@ export default async function ConnectionsPage({
                       </Button>
                     </form>
                   </div>
+                ) : p.authMode === "credentials" ? (
+                  <Link href={`/dashboard/connections/${p.id}`}>
+                    <Button>Forbind {p.name}</Button>
+                  </Link>
                 ) : (
                   <form action={connectProviderAction}>
                     <input type="hidden" name="provider" value={p.id} />

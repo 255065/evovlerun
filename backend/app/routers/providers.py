@@ -18,13 +18,15 @@ from pydantic import BaseModel
 
 # Side-effect imports — provider modules call register_provider() at import time.
 from app.services.providers import strava as _strava  # noqa: F401  pylint: disable=unused-import
+from app.services.providers import garmin as _garmin  # noqa: F401  pylint: disable=unused-import
 from app.config import Settings, get_settings
+from app.core.crypto import decrypt, encrypt
 from app.core.security import CurrentUser, get_current_user
 from app.services.connections import load_tokens, mark_status, upsert_tokens
 from app.services.oauth_state import verify_state
 from app.services.providers import get_provider, list_providers
 from app.services.providers.base import ProviderAuthError, ProviderError
-from app.services.workouts import upsert_activities
+from app.services.workouts import upsert_activities, upsert_daily_metrics
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/providers", tags=["providers"])
@@ -43,6 +45,21 @@ class ConnectionStatus(BaseModel):
     provider_user_id: str | None = None
     expires_at: datetime | None = None
     scope: str | None = None
+
+
+class CredentialLoginBody(BaseModel):
+    username: str
+    password: str
+
+
+class CredentialLoginReply(BaseModel):
+    status: str  # "connected" | "mfa_required"
+    pending_token: str | None = None  # opaque blob to pass back with MFA code
+
+
+class MfaSubmitBody(BaseModel):
+    pending_token: str
+    mfa_code: str
 
 
 def _redirect_uri(settings: Settings, provider_slug: str) -> str:
@@ -125,7 +142,12 @@ async def callback(
         since = datetime.now(timezone.utc) - timedelta(days=INITIAL_SYNC_DAYS)
         activities = await provider.fetch_activities(tokens, since=since)
         written = upsert_activities(user_id=user_id, activities=activities)
-        log.info("Initial sync for %s/%s: wrote %d activities", user_id, provider_slug, written)
+        metrics = await provider.fetch_daily_metrics(tokens, since=since.date())
+        m_written = upsert_daily_metrics(user_id=user_id, metrics=metrics)
+        log.info(
+            "Initial sync for %s/%s: %d activities, %d daily metrics",
+            user_id, provider_slug, written, m_written,
+        )
     except ProviderError as exc:
         log.warning("Initial sync failed for %s/%s: %s", user_id, provider_slug, exc)
         return RedirectResponse(_frontend_redirect(settings, "connected_no_sync", provider_slug))
@@ -177,7 +199,11 @@ async def manual_sync(
         since = datetime.now(timezone.utc) - timedelta(days=days)
         activities = await provider.fetch_activities(tokens, since=since)
         written = upsert_activities(user_id=user.id, activities=activities)
-        return {"provider": provider_slug, "synced": written}
+
+        metrics = await provider.fetch_daily_metrics(tokens, since=since.date())
+        m_written = upsert_daily_metrics(user_id=user.id, metrics=metrics)
+
+        return {"provider": provider_slug, "activities": written, "daily_metrics": m_written}
     except ProviderAuthError as exc:
         mark_status(user_id=user.id, provider=provider_slug, status="expired")
         raise HTTPException(status_code=401, detail=str(exc)) from exc
@@ -193,6 +219,88 @@ def disconnect(
 ) -> None:
     """Mark the connection revoked. Token row stays for audit; we just stop using it."""
     mark_status(user_id=user.id, provider=provider_slug, status="revoked")
+
+
+# -- Credential login (Garmin etc.) -------------------------------------------
+@router.post("/{provider_slug}/credential-login", response_model=CredentialLoginReply)
+async def credential_login(
+    provider_slug: str,
+    body: CredentialLoginBody,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> CredentialLoginReply:
+    """Username/password login for providers without OAuth.
+
+    If the provider requires MFA, returns `status="mfa_required"` and a
+    `pending_token` (encrypted blob containing the in-flight session state +
+    user credentials). The client posts the MFA code back to `/mfa-submit`.
+    """
+    try:
+        provider = get_provider(provider_slug)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    try:
+        result = await provider.login_with_credentials(
+            user_id=user.id, username=body.username, password=body.password
+        )
+    except ProviderAuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if result.needs_mfa:
+        # Bundle pending state + creds + provider so we can resume after MFA.
+        pending = encrypt(
+            f"{provider_slug}|{user.id}|{body.username}|{body.password}|{result.pending_state}"
+        )
+        return CredentialLoginReply(status="mfa_required", pending_token=pending)
+
+    assert result.tokens is not None
+    upsert_tokens(user_id=user.id, provider=provider_slug, tokens=result.tokens)
+    return CredentialLoginReply(status="connected")
+
+
+@router.post("/{provider_slug}/mfa-submit", response_model=CredentialLoginReply)
+async def submit_mfa(
+    provider_slug: str,
+    body: MfaSubmitBody,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> CredentialLoginReply:
+    """Finish a pending credential login by submitting the MFA code."""
+    try:
+        decoded = decrypt(body.pending_token).split("|", 4)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Bad pending_token: {exc}") from exc
+
+    if len(decoded) != 5:
+        raise HTTPException(status_code=400, detail="Malformed pending_token")
+    stored_slug, stored_user, username, password, pending_state = decoded
+
+    if stored_slug != provider_slug or stored_user != user.id:
+        raise HTTPException(status_code=403, detail="pending_token does not match request")
+
+    try:
+        provider = get_provider(provider_slug)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    try:
+        tokens = await provider.complete_credential_login(
+            user_id=user.id,
+            pending_state=pending_state,
+            mfa_code=body.mfa_code,
+            username=username,
+            password=password,
+        )
+    except ProviderAuthError as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    except ProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    upsert_tokens(user_id=user.id, provider=provider_slug, tokens=tokens)
+    return CredentialLoginReply(status="connected")
 
 
 # -- Strava webhook ------------------------------------------------------------
