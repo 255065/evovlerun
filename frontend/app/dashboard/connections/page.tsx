@@ -1,38 +1,176 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  connectProviderAction,
+  disconnectProviderAction,
+  getConnectionStatus,
+  syncProviderAction,
+} from "./actions";
 
-const PROVIDERS = [
-  { id: "garmin", name: "Garmin Connect", desc: "Aktiviteter, HR, sleep, body battery." },
-  { id: "strava", name: "Strava", desc: "Aktiviteter og social feed." },
-  { id: "oura", name: "Oura Ring", desc: "Sleep, HRV, readiness." },
-  { id: "whoop", name: "Whoop", desc: "Recovery, strain, sleep." },
-  { id: "apple_health", name: "Apple Health", desc: "Workouts, vitals (via webhook)." },
+type Provider = {
+  id: string;
+  name: string;
+  desc: string;
+  enabled: boolean;
+  warning?: string;
+};
+
+const PROVIDERS: Provider[] = [
+  {
+    id: "strava",
+    name: "Strava",
+    desc: "Aktiviteter, splits, pace, HR, power, elevation. Officiel OAuth.",
+    enabled: true,
+  },
+  {
+    id: "garmin",
+    name: "Garmin Connect",
+    desc: "Aktiviteter + sleep + HRV + body battery + readiness via uofficielt API.",
+    enabled: false,
+    warning: "Kommer snart — bruger uofficielt API (garth).",
+  },
+  {
+    id: "oura",
+    name: "Oura Ring",
+    desc: "Sleep, HRV, readiness, body temperature.",
+    enabled: false,
+  },
+  {
+    id: "whoop",
+    name: "Whoop",
+    desc: "Recovery, strain, sleep, workouts.",
+    enabled: false,
+  },
 ];
 
-export default function ConnectionsPage() {
+type SearchParams = {
+  provider?: string;
+  status?: string;
+};
+
+export default async function ConnectionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const banner = buildBanner(params);
+
+  // Fetch status for each enabled provider in parallel.
+  const statuses = await Promise.all(
+    PROVIDERS.filter((p) => p.enabled).map(async (p) => ({
+      id: p.id,
+      status: await getConnectionStatus(p.id),
+    })),
+  );
+  const statusById = Object.fromEntries(statuses.map((s) => [s.id, s.status]));
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Forbindelser</h1>
         <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-          Forbind dine wearables. Tokens krypteres og opbevares sikkert.
+          Forbind dine wearables. Tokens krypteres med Fernet før de gemmes.
         </p>
       </div>
+
+      {banner && (
+        <div
+          className={`rounded-md border px-4 py-3 text-sm ${
+            banner.tone === "ok"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
+              : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          }`}
+        >
+          {banner.message}
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
-        {PROVIDERS.map((p) => (
-          <Card key={p.id}>
-            <CardHeader>
-              <CardTitle>{p.name}</CardTitle>
-              <CardDescription>{p.desc}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" disabled>
-                Forbind (kommer snart)
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        {PROVIDERS.map((p) => {
+          const status = statusById[p.id] ?? null;
+          const isConnected = status?.connected ?? false;
+
+          return (
+            <Card key={p.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>{p.name}</CardTitle>
+                    <CardDescription className="mt-1">{p.desc}</CardDescription>
+                  </div>
+                  {isConnected && (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
+                      forbundet
+                    </span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {p.warning && <p className="text-xs text-amber-700 dark:text-amber-300">{p.warning}</p>}
+
+                {!p.enabled ? (
+                  <Button variant="outline" disabled>
+                    Kommer snart
+                  </Button>
+                ) : isConnected ? (
+                  <div className="flex flex-wrap gap-2">
+                    <form action={syncProviderAction}>
+                      <input type="hidden" name="provider" value={p.id} />
+                      <input type="hidden" name="days" value="30" />
+                      <Button type="submit" variant="outline" size="sm">
+                        Sync sidste 30 dage
+                      </Button>
+                    </form>
+                    <form action={disconnectProviderAction}>
+                      <input type="hidden" name="provider" value={p.id} />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Frakobl
+                      </Button>
+                    </form>
+                  </div>
+                ) : (
+                  <form action={connectProviderAction}>
+                    <input type="hidden" name="provider" value={p.id} />
+                    <Button type="submit">Forbind {p.name}</Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function buildBanner(
+  params: SearchParams,
+): { tone: "ok" | "warn"; message: string } | null {
+  const { provider, status } = params;
+  if (!provider || !status) return null;
+
+  if (status === "connected") {
+    return { tone: "ok", message: `${capitalize(provider)} forbundet og initial sync kørt 🎉` };
+  }
+  if (status === "connected_no_sync") {
+    return {
+      tone: "warn",
+      message: `${capitalize(provider)} forbundet, men første sync fejlede. Prøv "Sync sidste 30 dage" manuelt.`,
+    };
+  }
+  if (status === "synced") {
+    return { tone: "ok", message: `Sync færdig for ${capitalize(provider)}.` };
+  }
+  if (status === "disconnected") {
+    return { tone: "ok", message: `${capitalize(provider)} frakoblet.` };
+  }
+  if (status.startsWith("denied")) {
+    return { tone: "warn", message: `Du afslog adgang på ${capitalize(provider)}.` };
+  }
+  return { tone: "warn", message: `Status fra ${capitalize(provider)}: ${status}` };
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

@@ -35,9 +35,17 @@ class Settings(BaseSettings):
     # Token encryption for OAuth credentials
     token_encryption_key: str = ""
 
+    # Public URLs (used to build redirect_uri values for OAuth flows)
+    frontend_url: str = "http://localhost:3000"
+    backend_public_url: str = "http://localhost:8000"
+
+    # Secret used to sign OAuth `state` so providers can echo it back safely.
+    oauth_state_secret: str = ""
+
     # OAuth providers
     strava_client_id: str = ""
     strava_client_secret: str = ""
+    strava_webhook_verify_token: str = ""
     garmin_client_id: str = ""
     garmin_client_secret: str = ""
     oura_client_id: str = ""
