@@ -128,6 +128,15 @@ export default async function ConnectionsPage({
                         Sync sidste 30 dage
                       </Button>
                     </form>
+                    {p.id === "garmin" && (
+                      <form action={syncProviderAction}>
+                        <input type="hidden" name="provider" value={p.id} />
+                        <input type="hidden" name="days" value="90" />
+                        <Button type="submit" variant="default" size="sm">
+                          Deep sync (90 dage)
+                        </Button>
+                      </form>
+                    )}
                     <form action={disconnectProviderAction}>
                       <input type="hidden" name="provider" value={p.id} />
                       <Button type="submit" variant="ghost" size="sm">

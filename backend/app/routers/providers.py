@@ -23,6 +23,7 @@ from app.config import Settings, get_settings
 from app.core.crypto import decrypt, encrypt
 from app.core.security import CurrentUser, get_current_user
 from app.services.connections import load_tokens, mark_status, upsert_tokens
+from app.services.garmin_sync import sync_full as garmin_sync_full
 from app.services.oauth_state import verify_state
 from app.services.providers import get_provider, list_providers
 from app.services.providers.base import ProviderAuthError, ProviderError
@@ -180,8 +181,15 @@ async def manual_sync(
     provider_slug: str,
     user: Annotated[CurrentUser, Depends(get_current_user)],
     days: int = 30,
-) -> dict[str, int | str]:
-    """User-triggered re-sync for the last N days."""
+) -> dict[str, int | str | list]:
+    """User-triggered re-sync for the last N days.
+
+    For Garmin: pulls activities + per-activity splits/zones/weather + daily
+    wellness (sleep/HRV/stress/SpO2/respiration) + Garmin's performance
+    estimates (VO2max/LT/race predictions/training status) + personal records.
+
+    For other providers: just activities + daily metrics (no deep enrichment yet).
+    """
     try:
         provider = get_provider(provider_slug)
     except KeyError as exc:
@@ -190,6 +198,15 @@ async def manual_sync(
     tokens = load_tokens(user_id=user.id, provider=provider_slug)
     if not tokens:
         raise HTTPException(status_code=400, detail=f"Not connected to {provider_slug}")
+
+    # Garmin uses the deep orchestrator. Others stay on the simple two-call sync.
+    if provider_slug == "garmin":
+        report = await garmin_sync_full(user_id=user.id, days_back=days)
+        if report.get("status") == "auth_expired":
+            raise HTTPException(status_code=401, detail="; ".join(report.get("errors") or ["auth expired"]))
+        if report.get("status") == "rate_limited":
+            raise HTTPException(status_code=429, detail="Garmin rate-limited — try again in a few minutes")
+        return {"provider": provider_slug, **report}
 
     try:
         tokens = await provider.refresh(tokens)

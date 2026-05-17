@@ -28,7 +28,17 @@ def _activity_summary(row: dict[str, Any]) -> dict[str, Any]:
         "max_hr": row.get("max_hr"),
         "avg_pace_min_per_km": _format_pace(pace) if pace else None,
         "avg_power_w": row.get("avg_power_w"),
-        "trimp": row.get("trimp"),
+        "cadence_avg": row.get("cadence_avg"),
+        "calories": row.get("calories"),
+        "temperature_c": row.get("temperature_c"),
+        "aerobic_te": row.get("aerobic_te"),       # Garmin training effect 0-5
+        "anaerobic_te": row.get("anaerobic_te"),
+        "training_load": row.get("training_load"),
+        "hr_zone_seconds": row.get("hr_zone_seconds"),
+        "cardiac_drift_pct": row.get("cardiac_drift_pct"),
+        "pace_decay_pct": row.get("pace_decay_pct"),
+        "polarized_score": row.get("polarized_score"),  # % time in z1+z2
+        "vo2max_at_activity": row.get("vo2max_at_activity"),
         "notes": row.get("notes"),
     }
 
@@ -107,6 +117,51 @@ def get_activity(activity_id: str) -> dict[str, Any]:
     summary = _activity_summary(row)
     summary["raw_payload"] = row.get("raw_payload") or {}
     return summary
+
+
+def get_activity_splits(activity_id: str) -> dict[str, Any]:
+    """Return the per-lap breakdown for one activity.
+
+    Each split includes duration, distance, average HR, pace, cadence, power,
+    and elevation gain. Use this to spot cardiac drift, pace decay, or to
+    verify whether a structured workout hit its targets.
+
+    Args:
+        activity_id: UUID of the workout row.
+    """
+    user_id = get_user_id()
+    client = get_supabase_admin()
+    rows = (
+        client.table("workout_splits")
+        .select("*")
+        .eq("workout_id", activity_id)
+        .eq("user_id", user_id)
+        .order("split_index")
+        .execute()
+        .data
+        or []
+    )
+
+    return {
+        "activity_id": activity_id,
+        "split_count": len(rows),
+        "splits": [
+            {
+                "split_index": r["split_index"],
+                "split_type": r.get("split_type"),
+                "duration_s": r.get("duration_s"),
+                "distance_km": round(r["distance_m"] / 1000.0, 3) if r.get("distance_m") else None,
+                "avg_hr": r.get("avg_hr"),
+                "max_hr": r.get("max_hr"),
+                "avg_pace_min_per_km": _format_pace(r["avg_pace_s_per_km"]) if r.get("avg_pace_s_per_km") else None,
+                "avg_cadence": r.get("avg_cadence"),
+                "avg_power_w": r.get("avg_power_w"),
+                "elevation_gain_m": r.get("elevation_gain_m"),
+                "intensity": r.get("intensity"),
+            }
+            for r in rows
+        ],
+    }
 
 
 def get_training_volume(days: int = 7) -> dict[str, Any]:
