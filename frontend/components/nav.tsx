@@ -29,10 +29,22 @@ export function Nav({ email }: NavProps) {
             Træning
           </Link>
           <Link
+            href="/dashboard/limiter"
+            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          >
+            Limiter
+          </Link>
+          <Link
             href="/dashboard/connections"
             className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
           >
             Forbindelser
+          </Link>
+          <Link
+            href="/dashboard/profile"
+            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+          >
+            Profil
           </Link>
           <Link
             href="/dashboard/mcp"
