@@ -61,12 +61,17 @@ def get_planned_workouts(days_ahead: int = 7) -> dict[str, Any]:
 
 
 def get_current_plan() -> dict[str, Any]:
-    """Summary of the user's active training plan: race, phase, philosophy, week-of."""
+    """Summary of the user's active training plan plus the blueprint structure
+    (phases, weekly volume, guiding principles, weekly template).
+
+    Returns enough detail for Claude to reason about why a specific session
+    was prescribed and how it fits into the larger arc.
+    """
     user_id = get_user_id()
     client = get_supabase_admin()
     result = (
         client.table("training_plans")
-        .select("id, race_type, race_date, target_time_seconds, philosophy, start_date, weeks, current_phase, status")
+        .select("*")
         .eq("user_id", user_id)
         .eq("status", "active")
         .order("created_at", desc=True)
@@ -79,6 +84,8 @@ def get_current_plan() -> dict[str, Any]:
     p = result.data[0]
     start = datetime.fromisoformat(p["start_date"]).date() if p.get("start_date") else None
     week_of = ((date.today() - start).days // 7 + 1) if start else None
+    plan_json = p.get("plan_json") or {}
+    blueprint = plan_json.get("blueprint") or {}
 
     return {
         "active": True,
@@ -90,6 +97,11 @@ def get_current_plan() -> dict[str, Any]:
         "current_phase": p.get("current_phase"),
         "total_weeks": p["weeks"],
         "week_of_plan": week_of,
+        "phases": blueprint.get("phases"),
+        "weekly_template": blueprint.get("weekly_template"),
+        "guiding_principles": blueprint.get("guiding_principles"),
+        "key_metrics_to_track": blueprint.get("key_metrics_to_track"),
+        "auto_adapt_triggers": blueprint.get("auto_adapt_triggers"),
     }
 
 
