@@ -190,6 +190,12 @@ function buildBanner(
   if (status === "synced") {
     return { tone: "ok", message: `Sync færdig for ${capitalize(provider)}.` };
   }
+  if (status === "sync_started") {
+    return {
+      tone: "ok",
+      message: `Backfill startet for ${capitalize(provider)} — det kører i baggrunden og tager typisk 3–5 minutter. Genindlæs siden om et par minutter for at se det opdaterede dato-interval.`,
+    };
+  }
   if (status === "disconnected") {
     return { tone: "ok", message: `${capitalize(provider)} frakoblet.` };
   }

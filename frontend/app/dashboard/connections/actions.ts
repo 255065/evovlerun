@@ -44,6 +44,29 @@ export async function syncProviderAction(formData: FormData) {
 
   const token = await getSupabaseAccessToken();
 
+  // Fire-and-forget: an all-time backfill takes 3–5 minutes, which is
+  // longer than Vercel's 60s server-action limit. We kick the request off
+  // and don't wait for the response — backend keeps running independently.
+  // The page redirects immediately so the user sees "Sync started" feedback
+  // and can come back when the data is in. AbortSignal.timeout(2000) makes
+  // the dispatch itself fail fast if Railway is unreachable.
+  const longRunning = days === 0 || days > 180;
+  if (longRunning) {
+    fetch(`${BACKEND_URL}/providers/${provider}/sync?days=${days}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(2000),
+    }).catch(() => {
+      /* request started server-side; we don't care if our side dropped */
+    });
+    redirect(
+      `/dashboard/connections?provider=${provider}&status=sync_started`,
+    );
+  }
+
+  // Short syncs (≤180 days) keep the synchronous flow — they finish well
+  // within 60s and the user gets the "Sync færdig" banner with real counts.
   await fetch(`${BACKEND_URL}/providers/${provider}/sync?days=${days}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
