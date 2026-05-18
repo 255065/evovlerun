@@ -4,6 +4,8 @@ from datetime import date, timedelta
 from typing import Any
 
 from app.core.supabase import get_supabase_admin
+from app.services.trend_aggregates import compare_periods as svc_compare_periods
+from app.services.trend_aggregates import easy_run_trend as svc_easy_run_trend
 from app.services.trend_engine import compute_trends as svc_compute_trends
 from mcp_server.context import get_user_id
 
@@ -61,6 +63,37 @@ def get_metric_trends() -> dict[str, Any]:
     about progression in actual data.
     """
     return svc_compute_trends(get_user_id())
+
+
+def get_easy_run_trend(months: int = 3) -> dict[str, Any]:
+    """Easy-run pace and HR trend, month by month — the centerpiece chart.
+
+    Returns the average easy-run pace (lower = faster) and average easy-run
+    HR for each of the last `months` months. "Easy" = a run where ≥60% of
+    the time was in z1+z2.
+
+    Output is shaped for Claude to render as a chart artifact: each month
+    is one row with `pace_s_per_km`, `pace_display`, `hr_bpm`, and an
+    explicit `chart_hint` block requesting a bar+line chart.
+
+    Args:
+        months: How many months back to include. Default 3.
+    """
+    return svc_easy_run_trend(user_id=get_user_id(), months=months)
+
+
+def compare_periods(metric: str = "volume_km", weeks_back: int = 1) -> dict[str, Any]:
+    """Compare the last N weeks against the equivalent prior block.
+
+    Useful for "did I run more last week than the week before?" and similar.
+    Returns both the requested metric and a full snapshot of all comparable
+    metrics so Claude can present whichever is most useful.
+
+    Args:
+        metric: One of "volume_km", "sessions", "avg_easy_pace", "tss", "avg_hrv".
+        weeks_back: Window length in weeks. Default 1 (last week vs week before).
+    """
+    return svc_compare_periods(user_id=get_user_id(), metric=metric, weeks_back=weeks_back)
 
 
 def get_post_workout_briefings(days: int = 14) -> dict[str, Any]:

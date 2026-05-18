@@ -173,6 +173,27 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         description="Recent AI-generated debriefs for key sessions (long runs, intervals, threshold, race) with verdict, what-went-well, watch-outs, and next-session adjustment.",
     )(metrics.get_post_workout_briefings)
 
+    # ---- Chart-ready trend aggregates (Chirona-style visualizations) ----
+    mcp.tool(
+        name="get_easy_run_trend",
+        description=(
+            "Month-by-month easy-run pace and HR — designed for chart rendering. "
+            "Returns a `series` array with per-month {pace_s_per_km, pace_display, hr_bpm, "
+            "easy_runs, total_distance_km} plus a `chart_hint` block. Use this when the "
+            "athlete asks about pace progress, aerobic efficiency, or month-over-month "
+            "trends. Render the result as a bar+line chart artifact (pace bars with HR overlay)."
+        ),
+    )(metrics.get_easy_run_trend)
+    mcp.tool(
+        name="compare_periods",
+        description=(
+            "Compare a metric across the last N weeks vs the equivalent prior block. "
+            "Supported metrics: volume_km, sessions, avg_easy_pace, tss, avg_hrv. "
+            "Returns current vs previous values, delta %, and direction. Render as "
+            "side-by-side bars when the user asks 'how did this week/month compare?'."
+        ),
+    )(metrics.compare_periods)
+
     return mcp
 
 
