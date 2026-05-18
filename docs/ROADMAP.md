@@ -1,113 +1,146 @@
 # Roadmap
 
-## Hvor vi er (v0.1.0 — scaffold)
-- ✅ Monorepo med frontend + backend + supabase + docs
-- ✅ Next.js 15: landing, login/signup, beskyttet dashboard, navigation
-- ✅ FastAPI: health, auth/me, ingestion-stubs, training-stubs
-- ✅ Supabase: 9 tabeller med RLS + auto-profile-trigger
-- ✅ Krypteret token-opbevaring klar (Fernet)
-- ✅ Type-check + tests grønne
+## Status (2026-05-18)
 
-## Næste skridt — milestones
+EvolveRun er live i production. Backend på Railway, frontend på Vercel, Claude.ai connector OAuth fungerer. Hele Notion-paritet for installation er opnået — brugere kan paste vores MCP URL i Claude.ai → Settings → Connectors → "Connect" og er logget ind med OAuth + PKCE.
 
-### M1: Få det til at virke end-to-end lokalt (1–2 dage)
-- [ ] Opret rigtigt Supabase-projekt og kør migrationen
-- [ ] Udfyld `.env`-filer i frontend og backend
-- [ ] Signup → login → se dashboard
-- [ ] Verificér at `/auth/me` på backend returnerer brugeren med Supabase-JWT
+## Hvad der er færdigt ✅
 
-### M2: Første rigtige integration — Strava (3–5 dage)
-Strava er nemmest. Garmin kræver partneraftale.
-- [ ] Strava OAuth-flow (frontend redirect → backend exchange code → token gemmes krypteret)
-- [ ] Initial sync (sidste 90 dages aktiviteter → `workouts`)
-- [ ] Webhook-modtager (Strava-events: create / update / delete)
-- [ ] Dashboard viser sidste 10 aktiviteter
+### Infrastruktur
+- ✅ Monorepo frontend (Next.js 16) + backend (FastAPI) + Supabase
+- ✅ 5 migrationer kørt: initial schema, mcp_api_keys, Garmin deep data, metrics engine, OAuth clients
+- ✅ Railway production deploy m. Docker, --proxy-headers, healthcheck
+- ✅ Vercel production deploy m. korrekte env-vars
+- ✅ Encrypted token storage (Fernet)
+- ✅ Auth gating via Supabase + JWT
+- ✅ HTTPS overalt + CORS for Claude.ai
 
-### M3: Performance Model + ACWR (3–5 dage)
-- [ ] Beregn TRIMP / TSS per workout (Banister / Coggan)
-- [ ] Dagligt cron-job opdaterer `performance_profiles` (CTL/ATL/TSB/ACWR)
-- [ ] Dashboard viser CTL-graf og ACWR-zone (under 0.8 = detraining, 0.8–1.3 = optimal, >1.5 = farligt)
+### Data ingestion (Module 1)
+- ✅ Strava OAuth + webhook
+- ✅ Garmin (python-garminconnect) deep sync — splits, HR zones, weather, performance snapshots, PRs
+- ✅ Auto-detect history start (paginerer Garmin's activity list, sync helt tilbage til ældste)
+- ✅ Profile sync (DOB, sex, vægt, max HR observed)
+- ✅ Batched upserts (50 per chunk) — survive Supabase statement timeout
+- ✅ Phase-isolated sync (én fejl dræber ikke resten)
 
-### M4: Daily Briefing (Claude) (2–3 dage)
-- [ ] System prompt med atletens profil + seneste 14 dages data
-- [ ] Haiku genererer kort dagligt briefing om morgenen
-- [ ] Tool-call: `get_planned_workout(date)`, `get_recent_workouts(days)`, `get_readiness()`
-- [ ] Briefing viser **hvorfor** ved at citere data-punkter
+### Performance Model + Limiter Engine (Module 2)
+- ✅ Banister TRIMP + Coggan hrTSS per workout
+- ✅ Daglig CTL/ATL/TSB/ACWR EMA-rollup
+- ✅ Limiter detection engine (Claude Opus / MiniMax-M2.5 deep tier)
+- ✅ LLM abstraction (`app/services/llm/`) — provider-agnostic Anthropic ↔ MiniMax
+- ✅ MiniMax-M2.5 som aktiv provider via OpenAI SDK + custom base URL
 
-### M5: Limiter Detection + 4-week Review (5–7 dage)
-- [ ] Opus 4.7 kører hver 28. dag på fuld træningshistorik
-- [ ] Output: primær limiter + sekundær + confidence + structured reasoning → `limiter_history`
-- [ ] Hvis primær limiter ændrer sig, foreslås plan-adaptation
+### Metrics + Trends (Module 2 udvidet)
+- ✅ VDOT (Daniels), VO2max estimat, threshold pace+HR, running economy proxy
+- ✅ Fatigue resistance score, recovery capacity score
+- ✅ 4/8/12-ugers trend cards på 14 metrics
+- ✅ Chart-ready aggregates (`get_easy_run_trend`, `compare_periods`)
 
-### M6: Training Plan Generator (7–10 dage)
-- [ ] Plan-builder UI: race-type, mål-tid, race-dato, filosofi
-- [ ] Sonnet bygger 12–20-ugers periodiseret plan med daglige sessioner
-- [ ] Plan gemmes i `training_plans` + alle sessions i `planned_workouts`
-- [ ] Daglig "dynamic adapter": justér i morgen baseret på i dag (readiness, missed session, fatigue)
+### Training Plan Generator (Module 3)
+- ✅ 2-stage plan generator (blueprint + ugevis ekspansion)
+- ✅ Auto-philosophy valg (Daniels/Pfitzinger/Hansons/Norwegian/polarized/Lydiard/auto-hybrid)
+- ✅ Per-session rationale med data-citater
 
-### M7: Multi-provider sync (Oura, Whoop, Garmin) (5–7 dage)
-- [ ] Generisk provider-interface i backend
-- [ ] OAuth-flows + token-refresh for hver
-- [ ] `daily_metrics` unifies sleep/HRV/readiness fra hver provider
+### Post-workout AI
+- ✅ Auto-debriefs for key sessions (long runs ≥15km, intervals, threshold, race)
+- ✅ Idempotent (workout_id key på briefing)
+- ✅ Verdict + what-went-well + watch-outs + næste-session-justering
 
-### M8: Billing + Polish (3–5 dage)
-- [ ] Stripe subscription (3 tiers: Free / Pro / Elite)
-- [ ] Resend til transactional emails (briefings, alerts)
-- [ ] Onboarding-flow
-- [ ] Empty-states og fejl-håndtering
+### MCP server (Module 5 — bonus)
+- ✅ 24 MCP tools eksponeret via streamable HTTP transport
+- ✅ Bearer token + OAuth 2.1 + PKCE — fungerer i Claude Desktop, Cursor, Code, OG Claude.ai web
+- ✅ Dynamic Client Registration (RFC 7591)
+- ✅ Konversation-initialisation tool (Chirona-style coaching guide)
+- ✅ `get_period_summary` — Chirona-equivalent compact aggregat
+- ✅ Discovery metadata på root (RFC 9728)
 
-## Feature-idéer der differentierer fra Chirona
+### Frontend
+- ✅ Login, signup, beskyttet dashboard
+- ✅ Connections-side med Strava OAuth + Garmin login + sync-knapper (30d, 90d, all-time auto)
+- ✅ MCP-keys side med 3-step onboarding (auto-install bash, manual JSON, ChatGPT placeholder)
+- ✅ OAuth consent screen (`/oauth/consent`) for Claude.ai-flow
+- ✅ Træningsside med plan + plan-form
+- ✅ Limiter-side
+- ✅ Profile-side
+- ✅ Format helpers, sparkline, badges, sessioner-cards
 
-(Mine forslag — vi vælger sammen hvilke der kommer i hvilken milestone.)
+## Næste milestone — Chirona-style polish
 
-### 1. Explainability Replay
-Når coach foreslår "kør 8x400m i 3:30/km", kan brugeren klikke "vis mig hvorfor" og få:
-- Citat fra training philosophy (Daniels: VO2max-intervaller skal være 3:30–5min)
-- De seneste 3 ugers data der trigger sessionen (CTL +12%, threshold-pace forbedret 4s/km)
-- "Hvis du ikke føler dig klar, klik her" → coach justerer i realtid med begrundelse
+Detaljeret spec i `~/.claude/projects/-Users-valdemarstoerum/memory/chirona_pattern.md`.
 
-### 2. Physiological Digital Twin
-Vedligehold en "fysiologisk model" af brugeren der opdateres efter hver session:
-- Estimeret VO2max-trajektorie (ikke bare seneste tal)
-- Confidence intervals: "din threshold-pace er 3:55 ± 4s"
-- Forecast: "ved nuværende trend rammer du sub-3:30 marathon med 67% sandsynlighed"
+### M8: 5-spørgsmåls onboarding wizard (3-5 dage)
+- [ ] `/onboarding` welcome screen — serif headline, warm beige bg, orange accent
+- [ ] Q01 Goal-vælger (8 cards, "Most Picked" badge)
+- [ ] Q01b conditional follow-ups (race event details, swim focus, etc.)
+- [ ] Q02 Sessions/hours slider med auto-løb-label (Light/Steady/Committed/Heavy)
+- [ ] Q03 Connector-vælger (genbrug eksisterende provider-rows)
+- [ ] Q04 Style-vælger (Structured/Free-flow/Adaptive/Hybrid)
+- [ ] Q05 AI coach pick (Claude/ChatGPT med example chat preview)
+- [ ] Dark final-review screen "Looks good. Ready when you are."
+- [ ] Auto-trigger plan_generator efter Q5
+- [ ] Middleware gate: unfinished users → `/onboarding`
+- [ ] DB: `onboarding_completed_at` + `onboarding_responses` jsonb table
 
-### 3. HRV-baseret overtræning-prediction
-HRV alene er støjende, men 7-dages glidende baseline der dropper >5% i 5+ dage er en stærk overtrænings-signal. Coach fanger det *før* brugeren føler det — sender alert med specifik anbefaling (deload, ikke just "easy day").
+### M9: Cookbook (1-2 dage)
+- [ ] `/dashboard/cookbook` side med to tabs (Common questions / Prompt patterns)
+- [ ] 10 baked prompts implementeret (specifikke prompts i chirona_pattern.md)
+- [ ] Monospace `PROMPT` block med Copy-knap per kort
+- [ ] One-line "when to use this" hint per prompt
 
-### 4. Race Pace Strategy AI (med terrain + vejr)
-- Træk race-rute fra GPX
-- Træk vejrprognose for race-dagen
-- Generer pacing-plan per kilometer baseret på elevation, vind, temperatur og brugerens specifikke pacing-historie (positive/negative split-tendency)
+### M10: Tool-rename til kebab-case (½ dag)
+- [ ] Omdøb 24 tools til `provider-action` format (`garmin-list-activities`, `strava-get-recent`)
+- [ ] Source-prefix på tools der er provider-specifikke
+- [ ] Behold internal Python-navne (kun MCP tool names ændres)
 
-### 5. Hybrid Philosophy Engine
-I stedet for "vælg én filosofi", lad coach vælge per fase:
-- Base = polariseret (Norwegian-style threshold) til at bygge aerob
-- Build = Pfitzinger (LT-fokuseret)
-- Peak = Canova (race-specifik long runs)
-- Taper = Hansons (kort, høj intensitet)
+### M11: Dark theme dashboard (2-3 dage)
+- [ ] Dark warm-charcoal radial bg (`#1A1612 → #0E0B0A`)
+- [ ] Orange accent (`#DC6B3F`)
+- [ ] Tre-tier layout: CONNECTED SOURCES + AI COACH + ADD ANOTHER
+- [ ] Provider rows med live syncing-pill + dropdown + Disconnect
+- [ ] AI coach rows med "Add Claude" / "Set up ChatGPT"-knapper
 
-Med eksplicit begrundelse for hvert valg.
+### M12: Pricing + Stripe (2-3 dage)
+- [ ] Stripe Checkout integration
+- [ ] Pro Quarterly tier (£9.99 / 3 mdr eller £4.99/mdr eller similar)
+- [ ] Account-side med plan-overview + "View billing"
+- [ ] Free-trial logic (fx 14 dage)
 
-### 6. Voice journaling → indsigt
-Brugeren optager 30s voice memo efter sin tur ("benene tunge, men luft fin"). Whisper transkriberer, Haiku ekstraherer signal ("muscular fatigue, cardio OK"). Bygger en *subjective* tidslinje at korrelere med objektiv data — særligt værdifuldt for at fange tidlige skader.
+### M13: Flere providers (officielle gratis APIs) — VENTER
+- [ ] Apply til Garmin Connect Developer Program (gratis, 2 dages approval) — fix uofficielt API risk
+- [ ] Oura officiel OAuth
+- [ ] WHOOP officiel OAuth
+- [ ] Polar AccessLink OAuth
+- [ ] Suunto OAuth
+- [ ] (Senere) COROS officielt API
 
-### 7. Form Analyzer (slow-mo video)
-Bruger uploader 10s video af sit løb fra siden. Claude Vision + MediaPipe/PoseNet extracterer:
-- Cadence
-- Foot strike pattern
-- Heel kick / knee drive
-- Trunk lean
-Sammenligner med elite-baselines og foreslår specifikke drills.
+### M14: 4-week Review (Module 4)
+- [ ] Cron job hver 28. dag → Opus deep analysis
+- [ ] Output i `coach_briefings` med type `4_week_review`
+- [ ] Email via Resend (kræver M15)
 
-### 8. Community-baseret benchmarking (anonymized)
-"Brugere med din profil (35yo, 70kg, 3:30 marathon-mål, 60km/uge) bruger gennemsnitligt 6 uger på base-fasen — du er 2 uger inde." Giver kontekst uden at sammenligne med urealistiske elites.
+### M15: Email + cron — VENTER
+- [ ] Resend integration
+- [ ] Daily briefings via Haiku (HVIS brugeren beder om det — daily adapter er eksplicit afvist)
+- [ ] Cron worker (Railway scheduled jobs eller Vercel cron)
 
-### 9. Coach Personality Selector
-- "Maria" — empatisk, fokus på balance og mental sundhed
-- "Marius" — direkte, no-nonsense, Norwegian-style
-- "Pheidippides" — klassisk, refererer til træningshistorie
-Brugeren vælger ved onboarding. Briefing-tonen ændres.
+## Eksplicit afvist
 
-### 10. Injury Risk Score
-Kombinerer: ACWR, cadence-decay i lange ture, cardiac drift, sleep-debt, biomekanik fra Form Analyzer. Score 0–100 daglig. Når den passerer tærskel, automatisk deload-forslag.
+- ❌ **Daily Adapter** — brugeren afslog dette eksplicit ("det er for meget justering"). Plans er fine, micro-adjustments per dag er det ikke.
+- ❌ **Terra-aggregator nu** — for dyrt ($399-499/mo). Venter til 50+ paying users gør det rentabelt. Indtil da bruger vi officielle gratis OAuth APIs direkte (M13).
+
+## Differentierings-idéer fra original roadmap
+
+Stadig relevante hvis vi vil ud over Chirona-paritet:
+
+1. **Explainability Replay** — klik "vis mig hvorfor" på enhver session og få filosofi-citat + de seneste 3 ugers data der triggerede sessionen
+2. **Physiological Digital Twin** — confidence intervals + sub-3:30 marathon-forecast med sandsynlighed
+3. **HRV-baseret overtrænings-prediction** — 7-dages glidende baseline der dropper >5% i 5+ dage = alert
+4. **Race Pace Strategy AI** — GPX + vejrprognose + brugerens pacing-historie → per-km plan
+5. **Hybrid Philosophy Engine** — automatisk filosofi-skift per fase i stedet for én filosofi for hele planen
+6. **Voice journaling → indsigt** — Whisper + Haiku ekstraherer subjektive signaler
+7. **Form Analyzer** — slow-mo video + Pose-detection
+8. **Community benchmarking** — anonymiserede peers
+9. **Coach Personality Selector** — Maria (empatisk) / Marius (direkte) / Pheidippides (klassisk)
+10. **Injury Risk Score** — kombineret ACWR + decoupling + sleep-debt + biomekanik
+
+Ingen af disse ligger forrest — først skal vi have Chirona-paritet (M8-M12).

@@ -28,7 +28,16 @@ from mcp.server.auth.settings import AuthSettings
 
 from mcp_server.context import bind_user_from_env
 from mcp_server.token_verifier import EvolveRunTokenVerifier
-from mcp_server.tools import activities, limiter, metrics, performance, plans, recovery
+from mcp_server.tools import (
+    activities,
+    conversation_init,
+    limiter,
+    metrics,
+    performance,
+    period_summary,
+    plans,
+    recovery,
+)
 
 
 INSTRUCTIONS = (
@@ -81,11 +90,31 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         port=8001,
     )
 
+    # ---- Conversation initialisation (always first) ----
+    mcp.tool(
+        name="conversation_initialisation_critical_instructions",
+        description=(
+            "READ ME FIRST on every user message. Returns the EvolveRun coaching guide: "
+            "tone, response shape, when to merge providers, which tool to prefer for which "
+            "question. Call this once per user turn before any other EvolveRun tool."
+        ),
+    )(conversation_init.conversation_initialisation_critical_instructions)
+
     # ---- Activities & training volume ----
     mcp.tool(
         name="list_activities",
         description="List the user's recent activities (runs, rides, swims, strength, etc.).",
     )(activities.list_activities)
+    mcp.tool(
+        name="get_period_summary",
+        description=(
+            "Compact aggregate stats for a date window — counts, totals, averages "
+            "(distance, time, pace, HR, cadence, power, elevation, longest activity). "
+            "Args: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), runOnly (bool, optional), "
+            "provider (\"garmin\"/\"strava\"/\"all\", optional). Use this for "
+            "'how much did I run last month' / 'summarise my last 6 weeks' style questions."
+        ),
+    )(period_summary.get_period_summary)
     mcp.tool(
         name="get_activity",
         description="Return the full record (including splits/laps) for one activity by id.",
