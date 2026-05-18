@@ -139,9 +139,9 @@ export default async function ConnectionsPage({
                         </form>
                         <form action={syncProviderAction}>
                           <input type="hidden" name="provider" value={p.id} />
-                          <input type="hidden" name="days" value="730" />
+                          <input type="hidden" name="days" value="0" />
                           <Button type="submit" variant="outline" size="sm">
-                            All-time backfill (2 år)
+                            All-time backfill (auto)
                           </Button>
                         </form>
                       </>

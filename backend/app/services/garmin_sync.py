@@ -40,14 +40,17 @@ class GarminSyncReport(dict):
 async def sync_full(
     *,
     user_id: str,
-    days_back: int = 90,
+    days_back: int | None = 90,
     enrich: bool = True,
 ) -> GarminSyncReport:
     """Pull everything Garmin has on this user for the last `days_back` days.
 
     Args:
         days_back: How far back to look. 90 is the default for routine syncs;
-            pass 365–730 for an all-time backfill on first connect.
+            pass 365–730 for an all-time backfill on first connect, or pass
+            None to auto-detect: we ask Garmin for the user's oldest activity
+            and walk forward from there. Capped at 3650 days (~10 years) so
+            a runaway probe can't hang the worker.
         enrich: When True (default), every activity gets a follow-up fetch for
             splits, HR/power zones, and weather — 4 API calls per activity.
             Set to False for fast historical backfills where summary-only data
@@ -59,6 +62,21 @@ async def sync_full(
         return GarminSyncReport(status="no_connection")
 
     provider = GarminProvider()
+
+    # Auto-detect history start when days_back is None.
+    if days_back is None:
+        try:
+            oldest = await provider.detect_history_start(tokens)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("history auto-detect failed: %s — falling back to 730 days", exc)
+            oldest = None
+        if oldest:
+            span = (datetime.now(timezone.utc) - oldest).days + 1
+            days_back = min(max(span, 30), 3650)   # clamp 30d–10y
+            log.info("history auto-detected: oldest activity %s → days_back=%d", oldest.date(), days_back)
+        else:
+            days_back = 730   # 2-year safety net
+
     since_dt = datetime.now(timezone.utc) - timedelta(days=days_back)
     since_date = since_dt.date()
     today = date.today()

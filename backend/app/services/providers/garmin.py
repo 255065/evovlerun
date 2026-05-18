@@ -376,6 +376,45 @@ class GarminProvider(ProviderClient):
 
         return _normalize_personal_records(prs or [])
 
+    # -- History detection -------------------------------------------------
+    async def detect_history_start(
+        self,
+        tokens: ProviderTokens,
+        *,
+        page_size: int = 100,
+        max_pages: int = 200,
+    ) -> datetime | None:
+        """Find the date of the user's oldest activity on Garmin.
+
+        Garmin's `get_activities(start, limit)` returns newest-first with no
+        sort options, so we paginate until the page is empty and keep the
+        last seen activity's start time. Bounded at `max_pages × page_size`
+        = 20 000 activities by default — plenty for any real athlete and a
+        hard stop against runaway loops.
+        """
+        client = await _run_blocking(self._restore_client, tokens)
+        try:
+            offset = 0
+            oldest_iso: str | None = None
+            for _ in range(max_pages):
+                batch = await _safe_call(client.get_activities, offset, page_size)
+                if not batch:
+                    break
+                # Last entry on the page is the oldest in that page.
+                tail = batch[-1]
+                start = tail.get("startTimeGMT") or tail.get("startTimeLocal")
+                if start:
+                    oldest_iso = start
+                if len(batch) < page_size:
+                    break
+                offset += page_size
+        except GarminConnectAuthenticationError as exc:
+            raise ProviderAuthError(str(exc)) from exc
+        except GarminConnectTooManyRequestsError as exc:
+            raise ProviderRateLimitError(str(exc)) from exc
+
+        return _to_iso_datetime(oldest_iso) if oldest_iso else None
+
     # -- Athlete profile ---------------------------------------------------
     async def fetch_athlete_profile(
         self,

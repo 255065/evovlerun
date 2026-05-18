@@ -305,6 +305,19 @@ class ProviderClient(ABC):
         """
         return None
 
+    async def detect_history_start(
+        self,
+        tokens: ProviderTokens,
+    ) -> datetime | None:
+        """Return the earliest activity date the provider has on file.
+
+        Used by sync orchestrators to size an all-time backfill window
+        instead of guessing a fixed days_back. Optional; providers that
+        can't introspect their own history return None and the caller
+        falls back to a sensible default (e.g. 2 years).
+        """
+        return None
+
     # -- Webhooks ----------------------------------------------------------
     def verify_webhook(self, headers: dict[str, str], body: bytes) -> bool:
         """Verify a webhook signature. Override per provider. Default rejects all."""
