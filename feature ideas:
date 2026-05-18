@@ -1,0 +1,23 @@
+feature ideas: 
+
+1. Persistent Training Plan Memory via Connector
+Beskrivelse
+Implementeret en robust persistent memory mekanisme, så EvolveRun-coachen (Claude) kan huske og arbejde med brugerens aktuelle træningsprogram, mål og historik på tværs af alle enheder og samtaler.
+Hvordan det virker
+
+Brugeren beder Claude om at generere et nyt træningsprogram (f.eks. "Lav et 16-ugers program til København Halvmaraton").
+Claude genererer planen og kalder toolen save_training_plan.
+Connectoren (FastAPI backend) modtager tool call'et og gemmer hele planen struktureret i Supabase.
+Ved efterfølgende samtaler henter connectoren automatisk den nyeste træningsplan, brugerens mål og relevante performance data, og giver det som kontekst til Claude.
+
+Nøglekomponenter
+
+Tool-calling: save_training_plan, get_current_training_plan, update_training_plan m.fl.
+Database: training_plans tabel med versionering og historik.
+Cross-device support: Virker på Claude.ai, Claude Code/Desktop, mobil og web-app, fordi hukommelsen ligger i Supabase (ikke i Claude’s session).
+
+2. se på løbeform og økonomi: Running Power, Stride Length, Ground Contact Time, Vertical Oscillation
+
+3. tilføj chatgpt og grok og andre llms som til conectors. 
+
+4. fjern alt ai delen og bare have rå data som connecteren kan give til calude og chat gpt. det er jo meningen det er dem der skal drage konkutionerne . de skal ikke komme førhen. 
