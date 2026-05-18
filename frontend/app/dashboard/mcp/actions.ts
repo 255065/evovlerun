@@ -25,11 +25,19 @@ export type KeySummary = {
   revoked_at: string | null;
 };
 
+export type InstallSnippets = {
+  claude_desktop_config_snippet: string;
+  macos_install_script: string;
+  mcp_server_path: string;
+  claude_config_file_path: string;
+};
+
 export type CreateKeyResult = {
   id: string;
   name: string;
   key: string;
   key_prefix: string;
+  install: InstallSnippets;
 };
 
 export async function listKeys(): Promise<KeySummary[]> {
