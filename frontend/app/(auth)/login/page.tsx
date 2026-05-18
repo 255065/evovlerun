@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,6 @@ import { loginAction, type AuthState } from "../actions";
 const initialState: AuthState = { error: null };
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(loginAction, initialState);
-  // OAuth consent + any other deep link round-trips through here; the server
-  // action validates the value and falls back to /dashboard if it's unsafe.
-  const next = useSearchParams().get("redirect") ?? "";
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 dark:bg-neutral-950">
       <Card className="w-full max-w-md">
@@ -25,25 +20,11 @@ export default function LoginPage() {
           <CardDescription>Log ind for at se din coach.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
-            <input type="hidden" name="redirect" value={next} />
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required autoComplete="email" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" required autoComplete="current-password" />
-            </div>
-            {state.error && (
-              <p className="text-sm text-red-600" role="alert">
-                {state.error}
-              </p>
-            )}
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? "Logger ind..." : "Log ind"}
-            </Button>
-          </form>
+          {/* useSearchParams must live inside Suspense so Next.js can statically
+              prerender the rest of the form without bailing out. */}
+          <Suspense fallback={<LoginForm fallbackRedirect="" />}>
+            <SearchParamLoginForm />
+          </Suspense>
           <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
             Ingen konto?{" "}
             <Link href="/signup" className="font-medium underline">
@@ -53,5 +34,35 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function SearchParamLoginForm() {
+  const redirectTo = useSearchParams().get("redirect") ?? "";
+  return <LoginForm fallbackRedirect={redirectTo} />;
+}
+
+function LoginForm({ fallbackRedirect }: { fallbackRedirect: string }) {
+  const [state, formAction, pending] = useActionState(loginAction, initialState);
+  return (
+    <form action={formAction} className="space-y-4">
+      <input type="hidden" name="redirect" value={fallbackRedirect} />
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input id="email" name="email" type="email" required autoComplete="email" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input id="password" name="password" type="password" required autoComplete="current-password" />
+      </div>
+      {state.error && (
+        <p className="text-sm text-red-600" role="alert">
+          {state.error}
+        </p>
+      )}
+      <Button type="submit" className="w-full" disabled={pending}>
+        {pending ? "Logger ind..." : "Log ind"}
+      </Button>
+    </form>
   );
 }
