@@ -21,3 +21,11 @@ Cross-device support: Virker på Claude.ai, Claude Code/Desktop, mobil og web-ap
 3. tilføj chatgpt og grok og andre llms som til conectors. 
 
 4. fjern alt ai delen og bare have rå data som connecteren kan give til calude og chat gpt. det er jo meningen det er dem der skal drage konkutionerne . de skal ikke komme førhen. 
+
+5. I stedet for at have en cookbook for forskellige forslag til promts kan man have en animation på forsdien med en animation der skriver forslag tl forskellige promts i claude. 
+
+6. add fueling calculator: https://gwendurancefueling.com/
+
+7. add limiter quiz: https://running-limiter-finder-216861655601.us-west1.run.app/
+
+8. get max hr. 
