@@ -1,0 +1,29 @@
+# Don't ship secrets or dev clutter into the image.
+.env
+.env.*
+*.env
+
+# Python build artifacts.
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Editor / OS noise.
+.vscode/
+.idea/
+.DS_Store
+
+# Tests and migration files don't need to live in the runtime image — but
+# we keep them so a single deploy can also run `pytest` if we ever want to.
+
+# Documentation that's not consumed at runtime.
+*.md

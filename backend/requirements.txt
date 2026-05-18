@@ -8,6 +8,9 @@ supabase>=2.10,<3
 anthropic>=0.43,<1
 cryptography>=44
 python-jose[cryptography]>=3.3
+# OpenAI SDK — used by the MiniMax LLM client (MiniMax exposes an
+# OpenAI-compatible chat completions API at api.minimax.io).
+openai>=2,<3
 pytest>=8.3
 pytest-asyncio>=0.25
 garminconnect>=0.2.31
