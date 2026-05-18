@@ -1,13 +1,16 @@
 """Bearer-token verifier for the HTTP MCP transport.
 
-MCP's HTTP transport (streamable-HTTP / SSE) authenticates each request with
-an `Authorization: Bearer <token>` header. We treat the token as one of our
-EvolveRun API keys (the `evr_…` strings users generate in /dashboard/mcp),
-hash it, look it up in the mcp_api_keys table, and resolve it to a user_id
-that gets attached to the request via FastMCP's AuthContext.
+Accepts two token shapes:
 
-When a tool runs, it reads the user_id back out of the context — see
-mcp_server/context.py:get_user_id().
+  1. EvolveRun API keys (`evr_…`) — issued in /dashboard/mcp and pasted into
+     Claude Desktop / Cursor / Claude Code. Validated by hash lookup in
+     mcp_api_keys.
+  2. OAuth access tokens (JWT) — issued by /oauth/token after a user
+     completes the Claude.ai consent flow. Validated by signature alone.
+
+Both flows resolve to a user_id which we attach to the request via FastMCP's
+AuthContext (via the `client_id` field on AccessToken). When a tool runs it
+reads that back via mcp_server/context.py:get_user_id().
 """
 
 from __future__ import annotations
@@ -16,28 +19,36 @@ import logging
 
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 
+from app.services.oauth_jwt import decode_access_token
 from mcp_server.auth import InvalidApiKeyError, resolve_user_id
 
 log = logging.getLogger(__name__)
 
+API_KEY_PREFIX = "evr_"
+
 
 class EvolveRunTokenVerifier(TokenVerifier):
-    """Resolves an EvolveRun API key to a user-scoped AccessToken.
-
-    We stuff the user_id into `client_id` because that's the field FastMCP's
-    middleware exposes downstream and it's the only piece of identity our
-    tools need.
-    """
+    """Resolves either an EvolveRun API key or an OAuth JWT to a user_id."""
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        try:
-            user_id = resolve_user_id(token)
-        except InvalidApiKeyError as exc:
-            log.debug("MCP auth rejected: %s", exc)
+        # Distinguish the two formats by prefix. Anything starting with
+        # `evr_` is an API key; everything else we try as a JWT.
+        if token.startswith(API_KEY_PREFIX):
+            try:
+                user_id = resolve_user_id(token)
+            except InvalidApiKeyError as exc:
+                log.debug("MCP auth rejected (api key): %s", exc)
+                return None
+            return AccessToken(token=token, client_id=user_id, scopes=["mcp"], expires_at=None)
+
+        payload = decode_access_token(token)
+        if payload is None:
+            log.debug("MCP auth rejected: token is neither valid API key nor JWT")
             return None
+        scope = (payload.get("scope") or "mcp").split()
         return AccessToken(
             token=token,
-            client_id=user_id,
-            scopes=["mcp"],
-            expires_at=None,
+            client_id=payload["sub"],          # user_id
+            scopes=scope,
+            expires_at=int(payload["exp"]) if payload.get("exp") else None,
         )

@@ -29,17 +29,30 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
-  const isProtected = pathname.startsWith("/dashboard");
+  // `/oauth/consent` is auth-required because we need to know who's granting
+  // access to the client. `/oauth/*` other paths (none for now) would also
+  // sit behind login.
+  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/oauth/");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirectTo", pathname);
+    // Preserve the original URL *with its query string* so the consent
+    // parameters survive the round-trip through login.
+    const fullPath = pathname + (request.nextUrl.search || "");
+    url.searchParams.set("redirect", fullPath);
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
+    // Already logged in and hitting /login? Honor an explicit ?redirect= so
+    // the OAuth consent flow (which sends authenticated users here just in
+    // case) doesn't get stuck on the dashboard.
+    const redirectParam = request.nextUrl.searchParams.get("redirect");
+    if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+      return NextResponse.redirect(new URL(redirectParam, request.url));
+    }
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }

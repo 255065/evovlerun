@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, health, ingestion, limiter, mcp_keys, metrics, performance, providers, training
+from app.routers import auth, health, ingestion, limiter, mcp_keys, metrics, oauth, performance, providers, training
 from mcp_server.server import build_server as build_mcp_server
 from mcp_server.token_verifier import EvolveRunTokenVerifier
 
@@ -60,6 +60,7 @@ app.include_router(ingestion.router)
 app.include_router(limiter.router)
 app.include_router(mcp_keys.router)
 app.include_router(metrics.router)
+app.include_router(oauth.router)
 app.include_router(performance.router)
 app.include_router(providers.router)
 app.include_router(training.router)
@@ -97,20 +98,23 @@ def oauth_protected_resource() -> dict:
 
 @app.get("/.well-known/oauth-authorization-server", include_in_schema=False)
 def oauth_authorization_server() -> dict:
-    """Minimal AS metadata so the client's discovery chain doesn't dead-end.
+    """Full authorization-server metadata for OAuth 2.1 + PKCE + DCR.
 
-    We don't run a real authorization server — tokens are issued out-of-band
-    via /dashboard/mcp — but Claude.ai will 404-fail the connector if we
-    leave this empty. We advertise the resource server URL and bearer-only
-    flow so the client knows to skip the authorization dance and just send
-    its token.
+    Claude.ai reads this to discover where to register, authorize, and
+    exchange codes. Order matters — leaving any of these fields off makes
+    the discovery probe fail and the user sees "Couldn't reach the MCP
+    server" in the UI.
     """
     base = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
     return {
         "issuer": base,
-        "response_types_supported": [],
-        "grant_types_supported": [],
-        "token_endpoint_auth_methods_supported": ["bearer"],
+        "authorization_endpoint": f"{base}/oauth/authorize",
+        "token_endpoint": f"{base}/oauth/token",
+        "registration_endpoint": f"{base}/oauth/register",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code"],
+        "code_challenge_methods_supported": ["S256", "plain"],
+        "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
         "scopes_supported": ["mcp"],
     }
 
