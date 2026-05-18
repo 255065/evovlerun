@@ -70,6 +70,51 @@ def root() -> dict[str, str]:
     return {"service": "evolverun-backend", "docs": "/docs"}
 
 
+# ----------------------------------------------------------------------------
+# OAuth discovery for the MCP connector (RFC 9728)
+#
+# Claude.ai and other MCP clients look here when a user adds the connector,
+# to learn how to authenticate. Without this on the *root* origin (not under
+# /mcp), Claude.ai's "Couldn't reach the MCP server" handshake fails before
+# it ever sends a tool call.
+#
+# We're a pure Bearer-token resource server — no real OAuth authorization
+# server — so we publish the minimum metadata the spec requires and point at
+# our own origin as the (non-)authorization server.
+# ----------------------------------------------------------------------------
+import os  # noqa: E402
+
+@app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
+def oauth_protected_resource() -> dict:
+    base = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    return {
+        "resource": f"{base}/mcp",
+        "authorization_servers": [base],
+        "scopes_supported": ["mcp"],
+        "bearer_methods_supported": ["header"],
+    }
+
+
+@app.get("/.well-known/oauth-authorization-server", include_in_schema=False)
+def oauth_authorization_server() -> dict:
+    """Minimal AS metadata so the client's discovery chain doesn't dead-end.
+
+    We don't run a real authorization server — tokens are issued out-of-band
+    via /dashboard/mcp — but Claude.ai will 404-fail the connector if we
+    leave this empty. We advertise the resource server URL and bearer-only
+    flow so the client knows to skip the authorization dance and just send
+    its token.
+    """
+    base = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    return {
+        "issuer": base,
+        "response_types_supported": [],
+        "grant_types_supported": [],
+        "token_endpoint_auth_methods_supported": ["bearer"],
+        "scopes_supported": ["mcp"],
+    }
+
+
 # Mount MCP server under /mcp. Each MCP request must carry
 # `Authorization: Bearer evr_…` — the token verifier resolves it to the same
 # user_id we use for REST endpoints. FastMCP exposes a single POST route at

@@ -72,6 +72,10 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         # behind a load balancer and matches our tool-call model (no session
         # state between calls).
         stateless_http=True,
+        # Put the protocol endpoint at the mount root so the public URL
+        # becomes https://host/mcp instead of https://host/mcp/mcp. Matches
+        # what Claude.ai (and Chirona) advertise as the connector URL shape.
+        streamable_http_path="/",
         # Bind to all interfaces so containers/Cloud Run can route to us.
         host="0.0.0.0",
         port=8001,
