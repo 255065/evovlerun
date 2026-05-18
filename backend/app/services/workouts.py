@@ -29,18 +29,26 @@ def upsert_activities(*, user_id: str, activities: list[NormalizedActivity]) -> 
 
     client = get_supabase_admin()
     rows = [_workout_row(user_id, a) for a in activities]
-    result = (
-        client.table("workouts")
-        .upsert(rows, on_conflict="user_id,source,source_id")
-        .execute()
-    )
+
+    # Batch because a 2-year backfill is ~250 workouts, each with raw_payload
+    # JSON — one upsert can blow past Supabase's statement_timeout.
+    BATCH = 50
+    total = 0
+    for i in range(0, len(rows), BATCH):
+        chunk = rows[i : i + BATCH]
+        result = (
+            client.table("workouts")
+            .upsert(chunk, on_conflict="user_id,source,source_id")
+            .execute()
+        )
+        total += len(result.data or chunk)
 
     # Splits: only those activities that have them, looked up by (source, source_id).
     activities_with_splits = [a for a in activities if a.splits]
     if activities_with_splits:
         _upsert_splits(user_id=user_id, activities=activities_with_splits)
 
-    return len(result.data or rows)
+    return total
 
 
 def _workout_row(user_id: str, a: NormalizedActivity) -> dict:
@@ -130,11 +138,16 @@ def _upsert_splits(*, user_id: str, activities: list[NormalizedActivity]) -> Non
 # Daily metrics
 # ---------------------------------------------------------------------------
 def upsert_daily_metrics(*, user_id: str, metrics: list[NormalizedDailyMetric]) -> int:
-    """Upsert daily wellness rows. Dedup on (user_id, metric_date)."""
+    """Upsert daily wellness rows. Dedup on (user_id, metric_date).
+
+    Chunked because a 2-year backfill is 730 rows with raw_payload JSON
+    on each — one upsert hits Supabase's statement_timeout and crashes
+    the whole sync. 50 rows per batch keeps each transaction well under
+    the limit and individual failures only cost one batch.
+    """
     if not metrics:
         return 0
 
-    client = get_supabase_admin()
     rows = []
     for m in metrics:
         rows.append({
@@ -165,8 +178,14 @@ def upsert_daily_metrics(*, user_id: str, metrics: list[NormalizedDailyMetric]) 
             "raw_payload": m.raw_payload,
         })
 
-    client.table("daily_metrics").upsert(rows, on_conflict="user_id,metric_date").execute()
-    return len(rows)
+    client = get_supabase_admin()
+    BATCH = 50
+    written = 0
+    for i in range(0, len(rows), BATCH):
+        chunk = rows[i : i + BATCH]
+        client.table("daily_metrics").upsert(chunk, on_conflict="user_id,metric_date").execute()
+        written += len(chunk)
+    return written
 
 
 # ---------------------------------------------------------------------------

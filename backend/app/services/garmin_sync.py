@@ -113,21 +113,41 @@ async def sync_full(
             enriched = activities
             log.info("Skipping per-activity enrichment (enrich=False)")
 
-        report["activities"] = upsert_activities(user_id=user_id, activities=enriched)
-        report["splits"] = sum(len(a.splits) for a in enriched)
+        # Wrap each phase in its own try/except so a single failure (a slow
+        # Garmin endpoint, a Supabase timeout on one batch) doesn't skip the
+        # rest of the sync. Each phase reports its own error string and we
+        # keep going to the next.
+        try:
+            report["activities"] = upsert_activities(user_id=user_id, activities=enriched)
+            report["splits"] = sum(len(a.splits) for a in enriched)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("activities upsert failed")
+            report["errors"].append(f"activities: {exc}")
 
         # 3) Daily wellness across the window.
-        metrics = await provider.fetch_daily_metrics(tokens, since=since_date, until=today)
-        report["daily_metrics"] = upsert_daily_metrics(user_id=user_id, metrics=metrics)
+        try:
+            metrics = await provider.fetch_daily_metrics(tokens, since=since_date, until=today)
+            report["daily_metrics"] = upsert_daily_metrics(user_id=user_id, metrics=metrics)
+        except Exception as exc:  # noqa: BLE001
+            log.exception("daily metrics fetch/upsert failed")
+            report["errors"].append(f"daily_metrics: {exc}")
 
         # 4) Performance snapshot — one row for today.
-        perf = await provider.fetch_performance_snapshot(tokens, for_date=today)
-        if perf and upsert_performance_snapshot(user_id=user_id, snapshot=perf):
-            report["performance_snapshots"] = 1
+        try:
+            perf = await provider.fetch_performance_snapshot(tokens, for_date=today)
+            if perf and upsert_performance_snapshot(user_id=user_id, snapshot=perf):
+                report["performance_snapshots"] = 1
+        except Exception as exc:  # noqa: BLE001
+            log.warning("performance snapshot failed: %s", exc)
+            report["errors"].append(f"performance_snapshot: {exc}")
 
         # 5) Personal records.
-        prs = await provider.fetch_personal_records(tokens)
-        report["personal_records"] = upsert_personal_records(user_id=user_id, records=prs)
+        try:
+            prs = await provider.fetch_personal_records(tokens)
+            report["personal_records"] = upsert_personal_records(user_id=user_id, records=prs)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("personal records failed: %s", exc)
+            report["errors"].append(f"personal_records: {exc}")
 
         # 6) Profile sync — DOB, sex, weight, height from Garmin + max_hr
         #    derived from the highest observed workout max_hr in the last
