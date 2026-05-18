@@ -37,11 +37,22 @@ class GarminSyncReport(dict):
     """Plain dict subclass so we can return a structured summary from sync calls."""
 
 
-async def sync_full(*, user_id: str, days_back: int = 90) -> GarminSyncReport:
+async def sync_full(
+    *,
+    user_id: str,
+    days_back: int = 90,
+    enrich: bool = True,
+) -> GarminSyncReport:
     """Pull everything Garmin has on this user for the last `days_back` days.
 
-    Bounded at 90 days by default — going further is slow and Garmin
-    rate-limits aggressively.
+    Args:
+        days_back: How far back to look. 90 is the default for routine syncs;
+            pass 365–730 for an all-time backfill on first connect.
+        enrich: When True (default), every activity gets a follow-up fetch for
+            splits, HR/power zones, and weather — 4 API calls per activity.
+            Set to False for fast historical backfills where summary-only data
+            is enough; cuts a 700-activity import from ~60 min down to ~3 min.
+            Daily metrics, performance snapshot, and PRs are always pulled.
     """
     tokens = load_tokens(user_id=user_id, provider="garmin")
     if not tokens:
@@ -61,24 +72,28 @@ async def sync_full(*, user_id: str, days_back: int = 90) -> GarminSyncReport:
         activities = await provider.fetch_activities(tokens, since=since_dt)
         log.info("garmin sync: fetched %d activity summaries", len(activities))
 
-        # 2) Deep-enrich each activity (splits, HR zones, weather). Pass the
-        #    base activity so the enrichment doesn't have to re-normalize from
-        #    `get_activity()`'s nested shape — that's where we previously
-        #    corrupted the sport/distance/started_at fields.
-        enriched = []
-        for a in activities:
-            try:
-                detail = await provider.fetch_activity_details(
-                    tokens, source_id=a.source_id, base=a
-                )
-                enriched.append(detail or a)
-            except (ProviderAuthError, ProviderRateLimitError):
-                raise
-            except Exception as exc:  # noqa: BLE001
-                log.warning("activity %s detail fetch failed: %s", a.source_id, exc)
-                enriched.append(a)
-            # Be polite to Garmin's mobile API.
-            await asyncio.sleep(0.2)
+        # 2) Optionally deep-enrich each activity (splits, HR zones, weather).
+        #    Skip on big historical backfills — 4 API calls × ~700 activities
+        #    is an hour of wall-clock time plus rate-limit risk. Routine
+        #    syncs (last ~90 days) still enrich so the chart-ready data is
+        #    fresh.
+        if enrich:
+            enriched = []
+            for a in activities:
+                try:
+                    detail = await provider.fetch_activity_details(
+                        tokens, source_id=a.source_id, base=a
+                    )
+                    enriched.append(detail or a)
+                except (ProviderAuthError, ProviderRateLimitError):
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    log.warning("activity %s detail fetch failed: %s", a.source_id, exc)
+                    enriched.append(a)
+                await asyncio.sleep(0.2)
+        else:
+            enriched = activities
+            log.info("Skipping per-activity enrichment (enrich=False)")
 
         report["activities"] = upsert_activities(user_id=user_id, activities=enriched)
         report["splits"] = sum(len(a.splits) for a in enriched)

@@ -201,7 +201,11 @@ async def manual_sync(
 
     # Garmin uses the deep orchestrator. Others stay on the simple two-call sync.
     if provider_slug == "garmin":
-        report = await garmin_sync_full(user_id=user.id, days_back=days)
+        # Long historical windows skip per-activity enrichment (splits/zones/
+        # weather) because that would be ~4 API calls × hundreds of activities.
+        # Routine syncs (≤180 days) keep the rich enrichment.
+        enrich = days <= 180
+        report = await garmin_sync_full(user_id=user.id, days_back=days, enrich=enrich)
         if report.get("status") == "auth_expired":
             raise HTTPException(status_code=401, detail="; ".join(report.get("errors") or ["auth expired"]))
         if report.get("status") == "rate_limited":
