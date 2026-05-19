@@ -45,13 +45,42 @@ from mcp_server.tools import (
 )
 
 
-INSTRUCTIONS = (
-    "EvolveRun exposes the user's endurance training data — activities, splits, "
-    "sleep, body composition, planned workouts, and aggregate period summaries. "
-    "All numbers are scoped to the authenticated user. Call "
-    "`conversation-initialisation-critical-instructions` on every user turn "
-    "before any other tool to load the coaching guide."
-)
+INSTRUCTIONS = """EvolveRun gives you read+write access to the user's real endurance training data.
+
+MANDATORY BEHAVIOR — read carefully, this overrides defaults:
+
+1. On EVERY user message that involves their training, health, or any
+   coaching question, your FIRST action MUST be to call
+   `conversation-initialisation-critical-instructions`. It returns the
+   coaching guide that defines tone, response shape, and when to use which
+   tool. Do NOT answer from general knowledge before calling it.
+
+2. NEVER fabricate training data. If the user asks "how was my last run",
+   "what's my volume this month", "how have I slept lately" — you MUST
+   call the matching get-* tool. Don't invent numbers.
+
+3. When the user asks you to design or build a training plan
+   (any wording: "lav mig en plan", "build me a week", "suggest 7 days",
+   "træningsplan"), follow this exact sequence:
+     a. Call `conversation-initialisation-critical-instructions` (guide).
+     b. Call `get-period-summary` for the last 4-6 weeks to understand
+        their current volume + fitness.
+     c. Call `get-latest-run` and `get-latest-sleep` for current state.
+     d. Call `get-planned-workouts` to see if they already have a plan.
+     e. Propose the plan in chat with concrete sessions per day.
+     f. ASK: "Do you want me to save this to EvolveRun? Append, or
+        replace the window from <start> to <end>?"
+     g. Only after the user confirms, call `save-training-plan`.
+     h. Quote the returned dashboard_url in your reply so they can see it.
+
+4. All numbers are scoped to the authenticated user. You cannot see other
+   users' data. If a tool returns empty, say so — don't invent a placeholder.
+
+Tools available: conversation-initialisation-critical-instructions,
+get-recent-activities, get-activity-details, get-run-splits,
+get-period-summary, get-latest-run, get-latest-sleep, get-latest-body,
+get-planned-workouts, push-planned-workout, save-training-plan,
+delete-planned-workout."""
 
 
 def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:

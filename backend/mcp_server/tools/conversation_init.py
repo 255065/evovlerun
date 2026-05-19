@@ -21,6 +21,20 @@ _GUIDE = """# EvolveRun Coach — Conversation Guide
 Read this guide before calling any other EvolveRun tool. It defines how to
 answer the athlete on every message.
 
+## Hard rule on plan requests
+
+If the user asks for ANY training plan ("lav mig en plan", "build me a week",
+"suggest 7 days", "træningsplan", "what should I do next week"):
+  1. Pull their actual data — at minimum: `get-period-summary` over the last
+     4-6 weeks, `get-latest-run`, `get-latest-sleep`, `get-planned-workouts`.
+  2. Propose the plan in chat with concrete sessions and dates.
+  3. Ask: "Do you want me to save this to EvolveRun? Append, or replace
+     the window from <start> to <end>?"
+  4. After confirmation, call `save-training-plan` and quote the returned
+     `dashboard_url` so they can open it.
+NEVER reply to a plan request without calling tools. Generic advice without
+their data is what the user is paying us to NOT do.
+
 ## Core rules
 
 1. **Call this guide first.** Re-read it on every user message before any other
