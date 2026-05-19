@@ -164,23 +164,37 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         ),
     )(plans.get_planned_workouts)
 
-    # ── 11-12. Planned workouts write ──
+    # ── 11. Single-session write ──
     mcp.tool(
         name="push-planned-workout",
         description=(
-            "Add a planned workout to the user's active training plan. "
+            "Add ONE planned workout to the user's active training plan. "
+            "For multi-day plans, prefer `save-training-plan` (bulk + atomic). "
             "Args: scheduled_date (YYYY-MM-DD), session_type (easy/long/tempo/threshold/"
             "intervals/vo2max/fartlek/hills/recovery/race/strength/cross_training/rest), "
             "sport (default 'running'), duration_min, distance_m, description, rationale."
         ),
     )(plan_crud.push_planned_workout)
 
+    # ── 12. Bulk plan write (the centerpiece for assistant-generated plans) ──
+    mcp.tool(
+        name="save-training-plan",
+        description=(
+            "Save a multi-session training plan the assistant proposed. ALWAYS confirm "
+            "with the user before calling. Two modes: `append` keeps the existing plan "
+            "and adds the new sessions; `replace_window` first deletes every planned "
+            "workout in [window_start, window_end] and inserts the new ones — use this "
+            "when the user said 'update my plan' or 'overwrite next week'. Returns "
+            "`dashboard_url` so you can tell the user where to see the plan."
+        ),
+    )(plan_crud.save_training_plan)
+
+    # ── 13. Single-session delete ──
     mcp.tool(
         name="delete-planned-workout",
         description=(
             "Remove a planned workout by its id. Use when the athlete asks to drop a "
-            "session, or when overwriting the auto-generated plan with a different "
-            "session for that day (delete first, then push)."
+            "session, or when overwriting one specific day (delete first, then push)."
         ),
     )(plan_crud.delete_planned_workout)
 
