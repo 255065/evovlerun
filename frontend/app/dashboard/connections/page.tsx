@@ -17,21 +17,17 @@ type Provider = {
   warning?: string;
 };
 
+// V1: Strava is the only live integration. Garmin / Oura / Whoop / Polar all
+// auto-sync to Strava, so we "inherit" them without paying Terra. Garmin's
+// unofficial API has been pulled from the UI to avoid setting an expectation
+// we can't keep stable — the code path still exists in the backend for V2.
 const PROVIDERS: Provider[] = [
   {
     id: "strava",
     name: "Strava",
-    desc: "Aktiviteter, splits, pace, HR, power, elevation. Officiel OAuth.",
+    desc: "Aktiviteter, splits, pace, HR, power, elevation. Auto-syncer fra Garmin, Apple Watch, Polar, COROS, Suunto, Wahoo og 9 mere.",
     enabled: true,
     authMode: "oauth",
-  },
-  {
-    id: "garmin",
-    name: "Garmin Connect",
-    desc: "Aktiviteter + sleep + HRV + body battery + readiness.",
-    enabled: true,
-    authMode: "credentials",
-    warning: "Uofficielt API — kan stoppe uden varsel. Vi anbefaler en dedikeret app-konto.",
   },
   {
     id: "oura",
@@ -128,24 +124,6 @@ export default async function ConnectionsPage({
                         Sync sidste 30 dage
                       </Button>
                     </form>
-                    {p.id === "garmin" && (
-                      <>
-                        <form action={syncProviderAction}>
-                          <input type="hidden" name="provider" value={p.id} />
-                          <input type="hidden" name="days" value="90" />
-                          <Button type="submit" variant="default" size="sm">
-                            Deep sync (90 dage)
-                          </Button>
-                        </form>
-                        <form action={syncProviderAction}>
-                          <input type="hidden" name="provider" value={p.id} />
-                          <input type="hidden" name="days" value="0" />
-                          <Button type="submit" variant="outline" size="sm">
-                            All-time backfill (auto)
-                          </Button>
-                        </form>
-                      </>
-                    )}
                     <form action={disconnectProviderAction}>
                       <input type="hidden" name="provider" value={p.id} />
                       <Button type="submit" variant="ghost" size="sm">

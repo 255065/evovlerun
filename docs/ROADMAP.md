@@ -83,19 +83,26 @@ it's deferred to V2.
 In priority order — tick top-down:
 
 ### Must-ship (blockers)
-- [ ] **Landing page** at `/` — convert VercelHome from vercel.html
-- [ ] **Onboarding wizard** at `/onboarding` — 5 questions, Strava-only
-- [ ] **Disable Garmin connector** in UI — hide card on `/dashboard/connections`,
-      remove "Deep sync 90 days" and "All-time backfill" buttons
-- [ ] **Strip onboarding Q03** to only Strava (no Garmin/Oura/Polar etc.)
-- [ ] **Replace dashboard root** with the new VercelDashboard layout
-      (tabs, top stat row, today's plan card, weekly load chart)
+- [x] **Landing page** at `/` — Vercel-style hero, Strava-only positioning
+- [x] **Onboarding wizard** at `/onboarding` — 5 questions, Strava-only Q3,
+      kicks off Strava OAuth on finish
+- [x] **Disable Garmin connector** in UI — card hidden from
+      `/dashboard/connections`, `/dashboard/connections/garmin` redirects
+- [x] **Replace dashboard root** with Vercel-style layout
+      (tabs, stat row, today's plan, weekly load chart, recovery ring)
+- [x] **Account page** at `/dashboard/account` — billing status pill,
+      Start subscription / Manage billing buttons, logout
+- [x] **Stripe Checkout integration** — single-tier subscription via
+      `/billing/create-checkout-session`, webhook mirrors state onto profiles,
+      paywall middleware gated by `NEXT_PUBLIC_ENFORCE_SUBSCRIPTION=true`
+- [ ] **Apply Supabase migrations 0006 + 0007** — onboarding columns and
+      Stripe billing columns on `profiles`
+- [ ] **Configure Stripe in Railway** — create the V1 Product + Price in
+      Stripe dashboard, set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`,
+      `STRIPE_WEBHOOK_SECRET` env vars, point Stripe webhook at
+      `/billing/webhook`
 - [ ] **Strava-only data handling** in MCP tools — null-safe paths for
       sleep, body composition, HR zones (Strava doesn't expose those)
-- [ ] **Stripe Checkout integration** — subscription from day 1.
-      Single tier: ~€9–14/mo or €29/quarter. No free tier in V1.
-- [ ] **Account page** at `/dashboard/account` — billing link, plan
-      status, delete-account
 - [ ] **Cookbook page** at `/dashboard/cookbook` — 10 baked prompts with
       Copy buttons (specs in chirona_pattern.md memory)
 - [ ] **Brand decision** — keep "EvolveRun" or pick something simpler.

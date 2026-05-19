@@ -1,0 +1,321 @@
+"""Stripe Checkout subscription router.
+
+V1 has a single price tier. Users sign up → onboarding → /dashboard/account →
+Checkout. Stripe is the source of truth for subscription state; we mirror just
+enough on `profiles` (status, current_period_end, customer_id) to answer "is
+this user allowed in?" without hitting Stripe on every dashboard request.
+
+Endpoints
+---------
+- POST /billing/create-checkout-session  → returns { url } to Stripe Checkout
+- POST /billing/create-portal-session    → returns { url } to billing portal
+- GET  /billing/status                   → returns the user's mirrored state
+- POST /billing/webhook                  → Stripe → us; updates profiles
+
+The webhook MUST be public (no auth header) and signature-verified — Stripe
+will not retry against an authenticated route.
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Annotated, Any
+
+import stripe
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+
+from app.config import Settings, get_settings
+from app.core.security import CurrentUser, get_current_user
+from app.core.supabase import get_supabase_admin
+
+log = logging.getLogger("evolverun.billing")
+
+router = APIRouter(prefix="/billing", tags=["billing"])
+
+
+def _stripe_client(settings: Settings) -> Any:
+    """Initialise the Stripe SDK with the configured secret key.
+
+    Pinning the API version keeps webhook payloads on a known schema across
+    library upgrades — if Stripe deprecates the event shape we read, we'll
+    notice on intentional version bumps, not at random.
+    """
+    if not settings.stripe_secret_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Stripe is not configured on this environment",
+        )
+    stripe.api_key = settings.stripe_secret_key
+    stripe.api_version = "2024-12-18.acacia"
+    return stripe
+
+
+def _ensure_customer(client: Any, user: CurrentUser) -> str:
+    """Get or create a Stripe customer for this user.
+
+    We persist the customer id on `profiles.stripe_customer_id` the first
+    time so the second checkout doesn't create a duplicate customer record
+    (Stripe will happily make a new one for every Checkout if we don't pin).
+    """
+    supabase = get_supabase_admin()
+    profile = (
+        supabase.table("profiles")
+        .select("stripe_customer_id, email, full_name")
+        .eq("id", user.id)
+        .single()
+        .execute()
+    )
+    existing_id = (profile.data or {}).get("stripe_customer_id")
+    if existing_id:
+        return existing_id
+
+    customer = client.Customer.create(
+        email=user.email or (profile.data or {}).get("email"),
+        name=(profile.data or {}).get("full_name") or None,
+        metadata={"supabase_user_id": user.id},
+    )
+    supabase.table("profiles").update({"stripe_customer_id": customer.id}).eq(
+        "id", user.id
+    ).execute()
+    return customer.id
+
+
+# ---- Request / response models ------------------------------------------
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
+class PortalResponse(BaseModel):
+    url: str
+
+
+class StatusResponse(BaseModel):
+    status: str | None
+    price_id: str | None
+    current_period_end: datetime | None
+    customer_id: str | None
+    has_subscription: bool
+
+
+# ---- Endpoints ----------------------------------------------------------
+
+
+@router.post("/create-checkout-session", response_model=CheckoutResponse)
+def create_checkout_session(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> CheckoutResponse:
+    if not settings.stripe_price_id:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STRIPE_PRICE_ID is not configured",
+        )
+
+    client = _stripe_client(settings)
+    customer_id = _ensure_customer(client, user)
+    success_url = f"{settings.frontend_url}/dashboard/account?checkout=success"
+    cancel_url = f"{settings.frontend_url}/dashboard/account?checkout=cancelled"
+
+    session_obj = client.checkout.Session.create(
+        mode="subscription",
+        customer=customer_id,
+        line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
+        success_url=success_url,
+        cancel_url=cancel_url,
+        allow_promotion_codes=True,
+        # Persist the supabase user id on the session metadata so the
+        # webhook can find the right profile row even if customer mapping
+        # is somehow lost.
+        metadata={"supabase_user_id": user.id},
+        subscription_data={"metadata": {"supabase_user_id": user.id}},
+    )
+    return CheckoutResponse(url=session_obj.url)
+
+
+@router.post("/create-portal-session", response_model=PortalResponse)
+def create_portal_session(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> PortalResponse:
+    client = _stripe_client(settings)
+    customer_id = _ensure_customer(client, user)
+    portal_session = client.billing_portal.Session.create(
+        customer=customer_id,
+        return_url=f"{settings.frontend_url}/dashboard/account",
+    )
+    return PortalResponse(url=portal_session.url)
+
+
+@router.get("/status", response_model=StatusResponse)
+def billing_status(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> StatusResponse:
+    supabase = get_supabase_admin()
+    row = (
+        supabase.table("profiles")
+        .select(
+            "stripe_customer_id, subscription_status, subscription_price_id, subscription_current_period_end"
+        )
+        .eq("id", user.id)
+        .single()
+        .execute()
+    )
+    data = row.data or {}
+    period_end_raw = data.get("subscription_current_period_end")
+    period_end = None
+    if period_end_raw:
+        # Postgres returns ISO 8601 — parse to make it timezone-aware so the
+        # response always carries a UTC datetime.
+        period_end = datetime.fromisoformat(period_end_raw.replace("Z", "+00:00"))
+    sub_status = data.get("subscription_status")
+    return StatusResponse(
+        status=sub_status,
+        price_id=data.get("subscription_price_id"),
+        current_period_end=period_end,
+        customer_id=data.get("stripe_customer_id"),
+        has_subscription=sub_status in {"active", "trialing"},
+    )
+
+
+# ---- Webhook ------------------------------------------------------------
+
+
+@router.post("/webhook", include_in_schema=False)
+async def stripe_webhook(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, str]:
+    """Receive Stripe events and mirror subscription state onto profiles.
+
+    Public route — verified by Stripe's signature header, not Bearer auth.
+    Stripe retries failures with exponential backoff for up to 3 days, so
+    handlers must be idempotent.
+    """
+    if not settings.stripe_webhook_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STRIPE_WEBHOOK_SECRET is not configured",
+        )
+
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.stripe_webhook_secret
+        )
+    except (ValueError, stripe.SignatureVerificationError) as exc:
+        # Don't leak the cause — Stripe just wants a 400 and will retry only
+        # for transient failures, not signature mismatches.
+        log.warning("Stripe webhook signature verification failed: %s", exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bad signature") from exc
+
+    log.info("Stripe webhook: %s (id=%s)", event["type"], event["id"])
+    _handle_event(event)
+    return {"received": "ok"}
+
+
+def _handle_event(event: dict[str, Any]) -> None:
+    """Dispatch on event type. Add handlers conservatively — every new event
+    is a new failure mode."""
+    etype = event["type"]
+    data = event["data"]["object"]
+
+    if etype == "checkout.session.completed":
+        _on_checkout_completed(data)
+    elif etype in {"customer.subscription.created", "customer.subscription.updated"}:
+        _on_subscription_upserted(data)
+    elif etype == "customer.subscription.deleted":
+        _on_subscription_deleted(data)
+    else:
+        log.debug("Ignoring Stripe event type %s", etype)
+
+
+def _user_id_for_customer(customer_id: str | None, sub_metadata: dict[str, Any] | None = None) -> str | None:
+    """Resolve a Stripe customer id back to a supabase user id.
+
+    Prefer the supabase_user_id on the subscription metadata (set when we
+    create the Checkout session) — that survives even if the customer row
+    is mis-mapped. Falls back to profiles.stripe_customer_id.
+    """
+    if sub_metadata and (uid := sub_metadata.get("supabase_user_id")):
+        return uid
+    if not customer_id:
+        return None
+    supabase = get_supabase_admin()
+    row = (
+        supabase.table("profiles")
+        .select("id")
+        .eq("stripe_customer_id", customer_id)
+        .limit(1)
+        .execute()
+    )
+    if row.data:
+        return row.data[0]["id"]
+    return None
+
+
+def _on_checkout_completed(session_obj: dict[str, Any]) -> None:
+    """A successful Checkout means we have a customer + (usually) a sub.
+
+    Stripe will also fire customer.subscription.created right after, so the
+    full mirror happens there. Here we just make sure the customer id is
+    persisted in case the user reached checkout before we managed to write
+    it ourselves.
+    """
+    customer_id = session_obj.get("customer")
+    user_id = (session_obj.get("metadata") or {}).get("supabase_user_id")
+    if not customer_id or not user_id:
+        return
+    supabase = get_supabase_admin()
+    supabase.table("profiles").update({"stripe_customer_id": customer_id}).eq(
+        "id", user_id
+    ).execute()
+
+
+def _on_subscription_upserted(sub: dict[str, Any]) -> None:
+    customer_id = sub.get("customer")
+    metadata = sub.get("metadata") or {}
+    user_id = _user_id_for_customer(customer_id, metadata)
+    if not user_id:
+        log.warning("Subscription %s has no resolvable user", sub.get("id"))
+        return
+
+    # `items.data[0].price.id` is the canonical price for single-item subs,
+    # which is what V1 sells. If we ever do tiered subs we'll need to be
+    # smarter here.
+    items = (sub.get("items") or {}).get("data") or []
+    price_id = items[0]["price"]["id"] if items and items[0].get("price") else None
+    period_end_unix = sub.get("current_period_end")
+    period_end = (
+        datetime.fromtimestamp(period_end_unix, tz=timezone.utc).isoformat()
+        if period_end_unix
+        else None
+    )
+
+    supabase = get_supabase_admin()
+    supabase.table("profiles").update(
+        {
+            "stripe_subscription_id": sub.get("id"),
+            "subscription_status": sub.get("status"),
+            "subscription_price_id": price_id,
+            "subscription_current_period_end": period_end,
+        }
+    ).eq("id", user_id).execute()
+
+
+def _on_subscription_deleted(sub: dict[str, Any]) -> None:
+    user_id = _user_id_for_customer(sub.get("customer"), sub.get("metadata") or {})
+    if not user_id:
+        return
+    supabase = get_supabase_admin()
+    supabase.table("profiles").update(
+        {
+            "subscription_status": "canceled",
+            "stripe_subscription_id": None,
+            "subscription_current_period_end": None,
+        }
+    ).eq("id", user_id).execute()

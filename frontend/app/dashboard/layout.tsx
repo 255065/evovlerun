@@ -12,10 +12,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
+  // Subscription gating lives in lib/supabase/middleware.ts — it has reliable
+  // pathname access and runs before page rendering, so we don't double-check
+  // here. This layout is only responsible for auth and chrome.
+
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-white text-neutral-950">
       <Nav email={user.email} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-[1280px] px-6 py-8 sm:px-8">{children}</main>
     </div>
   );
 }

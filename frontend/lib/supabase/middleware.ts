@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ENFORCE_SUBSCRIPTION = process.env.NEXT_PUBLIC_ENFORCE_SUBSCRIPTION === "true";
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -32,7 +34,10 @@ export async function updateSession(request: NextRequest) {
   // `/oauth/consent` is auth-required because we need to know who's granting
   // access to the client. `/oauth/*` other paths (none for now) would also
   // sit behind login.
-  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/oauth/");
+  const isProtected =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/oauth/") ||
+    pathname.startsWith("/onboarding");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -55,6 +60,30 @@ export async function updateSession(request: NextRequest) {
     }
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // V1 paywall — only enforced when the env flag is on. Account, OAuth, and
+  // onboarding are always reachable so users can start, fix, or recover from
+  // a failed subscription without getting locked out of their own data.
+  if (
+    user &&
+    ENFORCE_SUBSCRIPTION &&
+    pathname.startsWith("/dashboard") &&
+    !pathname.startsWith("/dashboard/account")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_status")
+      .eq("id", user.id)
+      .single();
+    const status = profile?.subscription_status;
+    const active = status === "active" || status === "trialing";
+    if (!active) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/account";
+      url.searchParams.set("paywall", "1");
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

@@ -63,6 +63,18 @@ class Settings(BaseSettings):
     whoop_client_id: str = ""
     whoop_client_secret: str = ""
 
+    # Stripe — V1 subscription billing. `stripe_price_id` points at the
+    # Product → Price you create in the Stripe dashboard (the single V1 tier).
+    # `stripe_webhook_secret` is the signing secret from the Stripe webhook
+    # endpoint you create at /billing/webhook on this backend.
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_price_id: str = ""
+    stripe_webhook_secret: str = ""
+    # When True, /dashboard is hard-gated to subscribed users. Default False
+    # for V1 alpha so the founder can ship without paying themselves.
+    enforce_subscription: bool = False
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

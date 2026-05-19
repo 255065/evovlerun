@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import auth, health, ingestion, limiter, mcp_keys, metrics, oauth, performance, providers, training
+from app.routers import auth, billing, health, ingestion, limiter, mcp_keys, metrics, oauth, performance, providers, training
 from mcp_server.server import build_server as build_mcp_server
 from mcp_server.token_verifier import EvolveRunTokenVerifier
 
@@ -56,6 +56,7 @@ app.include_router(health.router)
 
 # Authenticated routes
 app.include_router(auth.router)
+app.include_router(billing.router)
 app.include_router(ingestion.router)
 app.include_router(limiter.router)
 app.include_router(mcp_keys.router)
