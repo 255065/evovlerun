@@ -288,8 +288,15 @@ def _on_subscription_upserted(sub: dict[str, Any]) -> None:
     # which is what V1 sells. If we ever do tiered subs we'll need to be
     # smarter here.
     items = (sub.get("items") or {}).get("data") or []
-    price_id = items[0]["price"]["id"] if items and items[0].get("price") else None
-    period_end_unix = sub.get("current_period_end")
+    first_item = items[0] if items else {}
+    price_id = first_item["price"]["id"] if first_item.get("price") else None
+
+    # `current_period_end` lives at two possible locations depending on the
+    # webhook API version: pre-2025-ish it's on the subscription itself; in
+    # the 2026 preview it moved to each subscription item so multi-cycle
+    # subs can have per-item periods. V1 is single-item, so we try the
+    # top-level field first, then fall back to the first item's value.
+    period_end_unix = sub.get("current_period_end") or first_item.get("current_period_end")
     period_end = (
         datetime.fromtimestamp(period_end_unix, tz=timezone.utc).isoformat()
         if period_end_unix
