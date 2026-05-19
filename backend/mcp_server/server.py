@@ -79,8 +79,11 @@ MANDATORY BEHAVIOR — read carefully, this overrides defaults:
 Tools available: conversation-initialisation-critical-instructions,
 get-recent-activities, get-activity-details, get-run-splits,
 get-period-summary, get-latest-run, get-latest-sleep, get-latest-body,
-get-planned-workouts, push-planned-workout, save-training-plan,
-delete-planned-workout."""
+get-planned-workouts, save-training-plan, delete-planned-workout.
+
+To write any session(s) to the plan use save-training-plan — there is
+intentionally no single-session push tool. Even a one-day add goes
+through save-training-plan with a one-row sessions array."""
 
 
 def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
@@ -193,37 +196,34 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         ),
     )(plans.get_planned_workouts)
 
-    # ── 11. Single-session write ──
-    mcp.tool(
-        name="push-planned-workout",
-        description=(
-            "Add ONE planned workout to the user's active training plan. "
-            "For multi-day plans, prefer `save-training-plan` (bulk + atomic). "
-            "Args: scheduled_date (YYYY-MM-DD), session_type (easy/long/tempo/threshold/"
-            "intervals/vo2max/fartlek/hills/recovery/race/strength/cross_training/rest), "
-            "sport (default 'running'), duration_min, distance_m, description, rationale."
-        ),
-    )(plan_crud.push_planned_workout)
-
-    # ── 12. Bulk plan write (the centerpiece for assistant-generated plans) ──
+    # ── 11. The ONLY plan-write tool — bulk + atomic ──
+    # We deliberately don't expose a single-session push. The assistant
+    # should always batch — even a one-session edit goes through
+    # save-training-plan with sessions=[...one row...]. This forces atomic
+    # writes and lets us swap implementations without touching the tool
+    # surface.
     mcp.tool(
         name="save-training-plan",
         description=(
-            "Save a multi-session training plan the assistant proposed. ALWAYS confirm "
-            "with the user before calling. Two modes: `append` keeps the existing plan "
-            "and adds the new sessions; `replace_window` first deletes every planned "
-            "workout in [window_start, window_end] and inserts the new ones — use this "
-            "when the user said 'update my plan' or 'overwrite next week'. Returns "
-            "`dashboard_url` so you can tell the user where to see the plan."
+            "Save a training plan (one or many sessions) the assistant proposed. "
+            "ALWAYS confirm with the user before calling. Two modes: `append` adds "
+            "the sessions on top of whatever's already in the plan; `replace_window` "
+            "first deletes every planned_workout in [window_start, window_end] and "
+            "then inserts the new ones — use this when the user said 'update my plan' "
+            "or 'overwrite next week'. Returns `dashboard_url` for the user to view it. "
+            "This is the ONLY way to write to the user's plan — there is no "
+            "per-session push tool. Even a one-session change goes through here "
+            "with sessions=[…one row…]."
         ),
     )(plan_crud.save_training_plan)
 
-    # ── 13. Single-session delete ──
+    # ── 12. Single-session delete ──
     mcp.tool(
         name="delete-planned-workout",
         description=(
             "Remove a planned workout by its id. Use when the athlete asks to drop a "
-            "session, or when overwriting one specific day (delete first, then push)."
+            "specific session. For 'overwrite this whole day/week', prefer "
+            "save-training-plan with mode=replace_window instead — it's atomic."
         ),
     )(plan_crud.delete_planned_workout)
 

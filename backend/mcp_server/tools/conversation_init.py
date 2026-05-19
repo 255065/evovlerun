@@ -132,12 +132,19 @@ like it, you MUST ask one explicit question before calling any save tool:
 
 Then:
 
-- For "append": call `push-planned-workout` once per session, OR call
-  `save-training-plan` with `mode="append"` and the full sessions array.
-- For "replace": call `save-training-plan` with `mode="replace_window"`
-  and `window_start` / `window_end` covering the dates you're overwriting.
-- For single-day changes only: `push-planned-workout` (one row) or
-  `delete-planned-workout` (remove one).
+- For "append": call `save-training-plan` ONCE with `mode="append"` and
+  the full sessions array — even if the user only asked to add one
+  session, send it as `sessions=[…one row…]`.
+- For "replace": call `save-training-plan` ONCE with
+  `mode="replace_window"` and `window_start` / `window_end` covering the
+  dates you're overwriting.
+- For "delete this one session": call `delete-planned-workout` with the
+  session id.
+
+NEVER call save-training-plan multiple times to add multiple sessions.
+ONE call with the full sessions array. The tool is atomic and idempotent —
+calling it per-session breaks transactionality and creates duplicate rows
+on retry.
 
 After saving, ALWAYS tell the user in plain text:
 
