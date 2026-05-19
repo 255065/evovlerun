@@ -1,74 +1,41 @@
 import Link from "next/link";
-import { Activity } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
-import { Button } from "@/components/ui/button";
+import { Brand } from "@/components/brand";
 
 type NavProps = {
   email?: string | null;
 };
 
-export function Nav({ email }: NavProps) {
+/**
+ * Minimal in-app nav: brand left, four items center, sign-out right.
+ * Anything not in this list (limiter, connections, MCP, profile) lives
+ * inside the dashboard surfaces or settings — the top chrome should
+ * stay short to keep the focus on training.
+ */
+export function Nav({ email: _email }: NavProps) {
   return (
-    <header className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <Activity className="h-5 w-5" />
-          EvolveRun
-        </Link>
-        <nav className="flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
+    <header className="border-b border-neutral-200 bg-[color:var(--evr-bg-warm)]/60 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-[1100px] items-center justify-between px-6">
+        <Brand href="/dashboard" />
+        <nav className="hidden items-center gap-7 text-[13.5px] text-neutral-700 sm:flex">
+          <Link href="/dashboard" className="hover:text-neutral-950">
             Dashboard
           </Link>
-          <Link
-            href="/dashboard/training"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            Træning
+          <Link href="/dashboard/training" className="hover:text-neutral-950">
+            Training
           </Link>
-          <Link
-            href="/dashboard/limiter"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            Limiter
-          </Link>
-          <Link
-            href="/dashboard/connections"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            Forbindelser
-          </Link>
-          <Link
-            href="/dashboard/profile"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            Profil
-          </Link>
-          <Link
-            href="/dashboard/mcp"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
-            MCP
-          </Link>
-          <Link
-            href="/dashboard/account"
-            className="text-sm text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-          >
+          <Link href="/dashboard/account" className="hover:text-neutral-950">
             Account
           </Link>
-          {email && (
-            <span className="hidden text-sm text-neutral-500 sm:inline dark:text-neutral-400">
-              {email}
-            </span>
-          )}
-          <form action={logoutAction}>
-            <Button type="submit" variant="ghost" size="sm">
-              Log ud
-            </Button>
-          </form>
         </nav>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-[13px] font-medium hover:bg-neutral-50"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
     </header>
   );

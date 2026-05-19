@@ -1,16 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadBillingStatus, openBillingPortalAction, startCheckoutAction } from "./actions";
-import { logoutAction } from "@/app/(auth)/actions";
 import { DeleteAccountButton } from "./delete-button";
+import { ProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = { checkout?: string; paywall?: string };
 
 /**
- * Single billing page: shows subscription state, lets the user start a new
- * Checkout if they aren't subscribed, or open the Stripe billing portal if
- * they are. Account deletion is left as a manual support flow for V1.
+ * Account page — three sections: profile, plan, danger zone. Mirrors the
+ * Chirona layout exactly so the user has one mental model across both.
+ * No nested cards, no busy chrome — text + a single action per section.
  */
 export default async function AccountPage({
   searchParams,
@@ -22,125 +22,157 @@ export default async function AccountPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const billing = await loadBillingStatus();
 
+  // Pull the stored full_name and split it into First / Last for the form.
+  // Single-word names go into First and leave Last empty, which feels right
+  // for athletes who only enter one name on signup.
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+    : { data: null };
+  const fullName = (profile?.full_name ?? "").trim();
+  const firstSpace = fullName.indexOf(" ");
+  const firstName = firstSpace === -1 ? fullName : fullName.slice(0, firstSpace);
+  const lastName = firstSpace === -1 ? "" : fullName.slice(firstSpace + 1);
+
+  const billing = await loadBillingStatus();
   const isActive = billing?.has_subscription ?? false;
   const periodEnd = billing?.current_period_end
-    ? new Date(billing.current_period_end).toLocaleDateString("da-DK", {
+    ? new Date(billing.current_period_end).toLocaleDateString("en-GB", {
         day: "numeric",
-        month: "long",
+        month: "short",
         year: "numeric",
       })
     : null;
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="mx-auto max-w-xl space-y-10 pb-16">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Account &amp; billing</h1>
+        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Account</h1>
         <p className="mt-1 text-[14px] text-neutral-600">
-          {user?.email && <>Signed in as <span className="font-mono">{user.email}</span></>}
+          Update your profile and plan settings.
         </p>
       </div>
 
       {params.paywall === "1" && (
         <Banner tone="warn">
-          EvolveRun kræver et aktivt abonnement. Start ét nedenfor for at få adgang til
-          dashboard, MCP-connectoren og chatten.
+          EvolveRun requires an active subscription. Start one below to unlock the dashboard and the chat connector.
         </Banner>
       )}
       {params.checkout === "success" && (
         <Banner tone="ok">
-          🎉 Subscription active. Du har fuld adgang nu — godt at have dig om bord.
+          Subscription active. You&apos;re all set — happy training.
         </Banner>
       )}
       {params.checkout === "cancelled" && (
         <Banner tone="warn">
-          Checkout afbrudt. Ingen penge trukket. Du kan starte igen nedenfor.
+          Checkout cancelled. No charge was made. You can start again below.
         </Banner>
       )}
 
-      <div className="rounded-[10px] border border-neutral-200 bg-white p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-[12.5px] font-mono uppercase tracking-widest text-neutral-500">
-              Subscription
-            </div>
-            <div className="mt-2 flex items-baseline gap-3">
-              <StatusPill status={billing?.status ?? null} />
-            </div>
-            {periodEnd && (
-              <p className="mt-2 text-[13px] text-neutral-600">
-                {isActive ? "Fornyes" : "Udløb"} {periodEnd}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* ─── Profile ───────────────────────────────────────── */}
+      <Section eyebrow="Profile">
+        <ProfileForm
+          firstName={firstName}
+          lastName={lastName}
+          email={user?.email ?? ""}
+        />
+      </Section>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+      {/* ─── Plan ──────────────────────────────────────────── */}
+      <Section eyebrow="Plan">
+        <div className="flex items-baseline gap-3">
+          <span className="text-[18px] font-semibold tracking-[-0.01em]">
+            {planName(billing?.status)}
+          </span>
+          <StatusPill status={billing?.status ?? null} />
+        </div>
+        {periodEnd && (
+          <p className="mt-1.5 text-[13.5px] text-neutral-600">
+            {isActive ? `Renews on ${periodEnd}. €9 per month.` : `Ended on ${periodEnd}.`}
+          </p>
+        )}
+        {!periodEnd && !isActive && (
+          <p className="mt-1.5 text-[13.5px] text-neutral-600">
+            €9 per month. Cancel anytime.
+          </p>
+        )}
+
+        <div className="mt-4">
           {isActive ? (
             <form action={openBillingPortalAction}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-5 py-2.5 text-[13.5px] font-medium hover:bg-neutral-50"
+                className="inline-flex items-center rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] font-medium hover:bg-neutral-50"
               >
-                Manage billing →
+                View billing
               </button>
             </form>
           ) : (
             <form action={startCheckoutAction}>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-5 py-2.5 text-[13.5px] font-medium text-white"
+                className="inline-flex items-center rounded-md bg-neutral-950 px-4 py-2 text-[13px] font-medium text-white"
               >
-                Start subscription →
+                Start subscription
               </button>
             </form>
           )}
-          {billing === null && (
-            <p className="text-[12.5px] text-amber-700">
-              Kunne ikke hente billing-status — Stripe er muligvis ikke konfigureret endnu.
-            </p>
-          )}
         </div>
-      </div>
+        {billing === null && (
+          <p className="mt-3 text-[12.5px] text-amber-700">
+            Billing status unavailable — Stripe may not be configured yet.
+          </p>
+        )}
+      </Section>
 
-      <div className="rounded-[10px] border border-neutral-200 bg-white p-6">
-        <div className="text-[12.5px] font-mono uppercase tracking-widest text-neutral-500">
-          Account
-        </div>
-        <form action={logoutAction} className="mt-4">
-          <button
-            type="submit"
-            className="text-[13px] text-neutral-600 underline hover:text-neutral-950"
-          >
-            Log ud
-          </button>
-        </form>
-      </div>
-
-      {/* Danger zone — destructive actions live at the bottom of the page
-          behind a second confirmation step. */}
-      <div className="rounded-[10px] border border-red-200 bg-red-50/40 p-6">
-        <div className="text-[12.5px] font-mono uppercase tracking-widest text-red-700">
-          Danger zone
-        </div>
-        <p className="mt-2 text-[13.5px] text-neutral-700">
-          Slet din konto og alle dine data (workouts, planer, Strava-forbindelse, profil).
-          Et aktivt abonnement opsiges med det samme uden refusion for indeværende periode.
+      {/* ─── Danger zone ───────────────────────────────────── */}
+      <Section eyebrow="Danger zone" tone="danger">
+        <p className="text-[13.5px] text-neutral-700">
+          Permanently delete your account and all associated data. This cannot be undone.
         </p>
         <div className="mt-3">
-          <DeleteAccountButton email={user?.email ?? ""} />
+          <DeleteAccountButton />
         </div>
-      </div>
+      </Section>
     </div>
   );
+}
+
+function Section({
+  eyebrow,
+  tone = "default",
+  children,
+}: {
+  eyebrow: string;
+  tone?: "default" | "danger";
+  children: React.ReactNode;
+}) {
+  const eyebrowCls =
+    tone === "danger"
+      ? "text-red-700"
+      : "text-neutral-500";
+  return (
+    <section className="border-t border-neutral-200 pt-6">
+      <div
+        className={`mb-4 font-mono text-[11px] uppercase tracking-[0.18em] ${eyebrowCls}`}
+      >
+        {eyebrow}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function planName(status: string | null | undefined): string {
+  if (status === "active" || status === "trialing") return "EvolveRun monthly";
+  if (status === "past_due" || status === "unpaid") return "EvolveRun monthly";
+  return "No plan";
 }
 
 function StatusPill({ status }: { status: string | null }) {
   const { label, cls } = pillStyle(status);
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[13px] font-medium ${cls}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+    <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11px] font-medium ${cls}`}>
       {label}
     </span>
   );
@@ -149,22 +181,22 @@ function StatusPill({ status }: { status: string | null }) {
 function pillStyle(status: string | null): { label: string; cls: string } {
   switch (status) {
     case "active":
-      return { label: "Active", cls: "bg-emerald-100 text-emerald-800" };
+      return { label: "active", cls: "bg-emerald-100 text-emerald-800" };
     case "trialing":
-      return { label: "Trialing", cls: "bg-blue-100 text-blue-800" };
+      return { label: "trialing", cls: "bg-blue-100 text-blue-800" };
     case "past_due":
-      return { label: "Past due", cls: "bg-amber-100 text-amber-800" };
+      return { label: "past due", cls: "bg-amber-100 text-amber-800" };
     case "canceled":
-      return { label: "Canceled", cls: "bg-neutral-200 text-neutral-700" };
+      return { label: "canceled", cls: "bg-neutral-200 text-neutral-700" };
     case "incomplete":
     case "incomplete_expired":
-      return { label: "Incomplete", cls: "bg-amber-100 text-amber-800" };
+      return { label: "incomplete", cls: "bg-amber-100 text-amber-800" };
     case "unpaid":
-      return { label: "Unpaid", cls: "bg-red-100 text-red-800" };
+      return { label: "unpaid", cls: "bg-red-100 text-red-800" };
     case "paused":
-      return { label: "Paused", cls: "bg-neutral-200 text-neutral-700" };
+      return { label: "paused", cls: "bg-neutral-200 text-neutral-700" };
     default:
-      return { label: "No subscription", cls: "bg-neutral-200 text-neutral-700" };
+      return { label: "inactive", cls: "bg-neutral-200 text-neutral-700" };
   }
 }
 

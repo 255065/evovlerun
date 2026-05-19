@@ -12,9 +12,9 @@ export default async function TrainingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Træningsplan</h1>
-        <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-          Sæt et race-mål og lad AI'en bygge en periodiseret plan baseret på din limiter og fitness.
+        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Training</h1>
+        <p className="mt-1 text-[14px] text-neutral-600">
+          Set a race goal and let the AI build a periodized plan based on your fitness and limiter.
         </p>
       </div>
 

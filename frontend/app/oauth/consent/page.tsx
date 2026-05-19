@@ -47,20 +47,20 @@ export default async function ConsentPage({
     <div className="mx-auto flex min-h-screen max-w-xl items-center p-6">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Forbind {clientName} til EvolveRun</CardTitle>
+          <CardTitle>Connect {clientName} to EvolveRun</CardTitle>
           <CardDescription>
-            <span className="font-medium">{clientName}</span> beder om adgang til din EvolveRun-konto
+            <span className="font-medium">{clientName}</span> is requesting access to your EvolveRun account
             ({user!.email}).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm dark:border-neutral-800 dark:bg-neutral-900">
-            <p className="font-medium">Dette giver adgang til:</p>
+            <p className="font-medium">This grants access to:</p>
             <ul className="mt-2 space-y-1 text-neutral-700 dark:text-neutral-300">
-              <li>• Aktiviteter, splits, HR-zoner, pace, power, recovery</li>
-              <li>• Detekterede limiters + dine trænings­planer</li>
-              <li>• Beregnede metrics (VDOT, threshold, fatigue resistance)</li>
-              <li>• Post-workout AI-analyser</li>
+              <li>• Activities, splits, HR zones, pace, power</li>
+              <li>• Your training plans and saved sessions</li>
+              <li>• Period summaries and computed metrics</li>
+              <li>• Plan-write actions when the assistant asks you to save</li>
             </ul>
             <p className="mt-3 text-xs text-neutral-500">
               Scope: <code className="font-mono">{scopes.join(" ")}</code>
@@ -68,10 +68,10 @@ export default async function ConsentPage({
           </div>
 
           <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            <strong>Tjek redirect URI:</strong>{" "}
+            <strong>Verify the redirect URI:</strong>{" "}
             <code className="break-all font-mono">{params.redirect_uri}</code>
             <br />
-            Hvis det ikke er Claude.ai (eller den klient du selv tilføjede), klik Afvis.
+            If this isn&apos;t Claude.ai (or the client you added yourself), click Cancel.
           </div>
 
           <form action={approveOAuthAction} className="flex gap-3 pt-2">

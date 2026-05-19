@@ -14,7 +14,7 @@ export function ApproveButton() {
   return (
     <>
       <Button type="submit" disabled={pending} className="flex-1">
-        {pending ? "Forbinder…" : "Allow"}
+        {pending ? "Connecting…" : "Allow"}
       </Button>
       <Button
         type="submit"
@@ -22,7 +22,7 @@ export function ApproveButton() {
         formAction={denyOAuthAction}
         disabled={pending}
       >
-        Afvis
+        Cancel
       </Button>
     </>
   );

@@ -70,9 +70,9 @@ export default async function ConnectionsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Forbindelser</h1>
-        <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-          Forbind dine wearables. Tokens krypteres med Fernet før de gemmes.
+        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Connections</h1>
+        <p className="mt-1 text-[14px] text-neutral-600">
+          Connect your data sources. Tokens are encrypted with Fernet before they&apos;re stored.
         </p>
       </div>
 
@@ -127,18 +127,18 @@ export default async function ConnectionsPage({
                     <form action={disconnectProviderAction}>
                       <input type="hidden" name="provider" value={p.id} />
                       <Button type="submit" variant="ghost" size="sm">
-                        Frakobl
+                        Disconnect
                       </Button>
                     </form>
                   </div>
                 ) : p.authMode === "credentials" ? (
                   <Link href={`/dashboard/connections/${p.id}`}>
-                    <Button>Forbind {p.name}</Button>
+                    <Button>Connect {p.name}</Button>
                   </Link>
                 ) : (
                   <form action={connectProviderAction}>
                     <input type="hidden" name="provider" value={p.id} />
-                    <Button type="submit">Forbind {p.name}</Button>
+                    <Button type="submit">Connect {p.name}</Button>
                   </form>
                 )}
               </CardContent>

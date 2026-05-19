@@ -17,9 +17,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // here. This layout is only responsible for auth and chrome.
 
   return (
-    <div className="min-h-screen bg-white text-neutral-950">
+    <div className="evr-warm min-h-screen text-neutral-950">
       <Nav email={user.email} />
-      <main className="mx-auto max-w-[1280px] px-6 py-8 sm:px-8">{children}</main>
+      <main className="mx-auto max-w-[1100px] px-6 py-12 sm:px-8">{children}</main>
     </div>
   );
 }

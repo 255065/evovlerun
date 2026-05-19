@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,6 +13,38 @@ async function getToken(): Promise<string> {
   } = await supabase.auth.getSession();
   if (!session?.access_token) redirect("/login");
   return session.access_token;
+}
+
+export type ProfileFormState = { ok: boolean; error?: string };
+
+/**
+ * Persist the First / Last name fields. We store as a single full_name
+ * column so a "Valdemar Størum" round-trips cleanly. Email lives on
+ * auth.users — we don't expose changing it from this page (Supabase
+ * email change requires a re-verification flow we're not building in V1).
+ */
+export async function saveProfileAction(
+  _prev: ProfileFormState,
+  formData: FormData,
+): Promise<ProfileFormState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const first = String(formData.get("first_name") ?? "").trim();
+  const last = String(formData.get("last_name") ?? "").trim();
+  const fullName = [first, last].filter(Boolean).join(" ");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullName || null })
+    .eq("id", user.id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/dashboard/account");
+  return { ok: true };
 }
 
 export type BillingStatus = {
