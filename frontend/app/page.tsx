@@ -1,8 +1,20 @@
 import Link from "next/link";
 
-export default function LandingPage() {
+type SearchParams = { deleted?: string };
+
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
   return (
     <div className="min-h-screen bg-white text-neutral-950">
+      {params.deleted === "1" && (
+        <div className="border-b border-emerald-200 bg-emerald-50 px-6 py-3 text-center text-[13.5px] text-emerald-900">
+          Din konto og alle data er slettet. Tak for at have prøvet EvolveRun.
+        </div>
+      )}
       <Nav />
       <Hero />
       <StatsGrid />

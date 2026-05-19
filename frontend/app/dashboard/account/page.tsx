@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadBillingStatus, openBillingPortalAction, startCheckoutAction } from "./actions";
 import { logoutAction } from "@/app/(auth)/actions";
+import { DeleteAccountButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -107,9 +108,6 @@ export default async function AccountPage({
         <div className="text-[12.5px] font-mono uppercase tracking-widest text-neutral-500">
           Account
         </div>
-        <p className="mt-2 text-[14px] text-neutral-700">
-          Vil du slette din konto? Skriv til support — vi sletter alt inden for 7 dage. (V2: self-service knap her.)
-        </p>
         <form action={logoutAction} className="mt-4">
           <button
             type="submit"
@@ -118,6 +116,21 @@ export default async function AccountPage({
             Log ud
           </button>
         </form>
+      </div>
+
+      {/* Danger zone — destructive actions live at the bottom of the page
+          behind a second confirmation step. */}
+      <div className="rounded-[10px] border border-red-200 bg-red-50/40 p-6">
+        <div className="text-[12.5px] font-mono uppercase tracking-widest text-red-700">
+          Danger zone
+        </div>
+        <p className="mt-2 text-[13.5px] text-neutral-700">
+          Slet din konto og alle dine data (workouts, planer, Strava-forbindelse, profil).
+          Et aktivt abonnement opsiges med det samme uden refusion for indeværende periode.
+        </p>
+        <div className="mt-3">
+          <DeleteAccountButton email={user?.email ?? ""} />
+        </div>
       </div>
     </div>
   );

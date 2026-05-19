@@ -74,3 +74,33 @@ export async function openBillingPortalAction() {
   const { url } = (await res.json()) as { url: string };
   redirect(url);
 }
+
+/**
+ * Permanently delete the current user. Calls backend DELETE /auth/me which
+ * cancels the Stripe subscription, deletes the auth.user row, and cascades
+ * all user-scoped data. After success we log the (now-orphan) Supabase
+ * session out and land the visitor on the marketing root.
+ */
+export async function deleteAccountAction() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) redirect("/login");
+
+  const res = await fetch(`${BACKEND_URL}/auth/me`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    cache: "no-store",
+  });
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text();
+    throw new Error(`Delete failed (${res.status}): ${text}`);
+  }
+
+  // The auth user is gone — make sure the cookie session is too. Without
+  // signOut the browser would keep a now-invalid JWT and bounce back to
+  // /login on the next protected request, which is ugly.
+  await supabase.auth.signOut();
+  redirect("/?deleted=1");
+}
