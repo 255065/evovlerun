@@ -12,15 +12,22 @@ Two transports:
 
 The HTTP variant is also embedded inside the FastAPI app at /mcp — see
 app/main.py — which means in production we serve API + MCP on one port.
-"""
 
-from __future__ import annotations
+Tool surface
+------------
+We deliberately ship a small, Chirona-matching toolkit (11 tools) so the
+chat assistant does the reasoning and we only expose raw data shapes. All
+tool names use kebab-case to match Chirona's visual fingerprint inside
+Claude.ai's connector picker. Behind the scenes our richer analytics
+(limiter engine, metrics engine, post-workout AI, etc.) still run in the
+sync pipeline — they're just not callable from chat. If we ever want them
+back as chat tools, re-register the entries below.
+"""
 
 import argparse
 import logging
-import sys
-
 import os
+import sys
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.auth.provider import TokenVerifier
@@ -31,38 +38,29 @@ from mcp_server.token_verifier import EvolveRunTokenVerifier
 from mcp_server.tools import (
     activities,
     conversation_init,
-    limiter,
-    metrics,
-    performance,
+    latest,
     period_summary,
+    plan_crud,
     plans,
-    recovery,
 )
 
 
 INSTRUCTIONS = (
-    "EvolveRun is the user's personal endurance training data. "
-    "Tools expose activities, recovery (sleep/HRV/body battery/readiness), "
-    "planned workouts, the user's physiological performance snapshot, our "
-    "computed metrics (VDOT, threshold, running economy, fatigue resistance), "
-    "the AI-detected limiter, and per-key-session post-workout AI debriefs. "
-    "All numbers are scoped to the authenticated user — never invent values. "
-    "When answering, prefer to cite specific data points and explain the "
-    "physiological reasoning rather than just stating prescriptions."
+    "EvolveRun exposes the user's endurance training data — activities, splits, "
+    "sleep, body composition, planned workouts, and aggregate period summaries. "
+    "All numbers are scoped to the authenticated user. Call "
+    "`conversation-initialisation-critical-instructions` on every user turn "
+    "before any other tool to load the coaching guide."
 )
 
 
 def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
-    """Construct the FastMCP server with all tools registered.
+    """Construct the FastMCP server with the 11 production tools registered.
 
     Args:
         token_verifier: Pass an instance to enable HTTP Bearer auth.
             For stdio mode, leave None — auth happens once via env var.
     """
-    # FastMCP refuses to take a token_verifier without an AuthSettings — even
-    # for pure Bearer-token flows where the OAuth metadata is unused. We
-    # publish a placeholder issuer that points to the public deployment URL
-    # (overridable via MCP_PUBLIC_URL for staging/local).
     auth_settings = None
     if token_verifier is not None:
         public_url = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000")
@@ -77,22 +75,15 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         instructions=INSTRUCTIONS,
         token_verifier=token_verifier,
         auth=auth_settings,
-        # Stateless = each HTTP request is independent. Simpler to deploy
-        # behind a load balancer and matches our tool-call model (no session
-        # state between calls).
         stateless_http=True,
-        # Put the protocol endpoint at the mount root so the public URL
-        # becomes https://host/mcp instead of https://host/mcp/mcp. Matches
-        # what Claude.ai (and Chirona) advertise as the connector URL shape.
         streamable_http_path="/",
-        # Bind to all interfaces so containers/Cloud Run can route to us.
         host="0.0.0.0",
         port=8001,
     )
 
-    # ---- Conversation initialisation (always first) ----
+    # ── 1. Coaching guide — must be called first on every user turn ──
     mcp.tool(
-        name="conversation_initialisation_critical_instructions",
+        name="conversation-initialisation-critical-instructions",
         description=(
             "READ ME FIRST on every user message. Returns the EvolveRun coaching guide: "
             "tone, response shape, when to merge providers, which tool to prefer for which "
@@ -100,128 +91,98 @@ def build_server(token_verifier: TokenVerifier | None = None) -> FastMCP:
         ),
     )(conversation_init.conversation_initialisation_critical_instructions)
 
-    # ---- Activities & training volume ----
+    # ── 2-6. Read tools — activities ──
     mcp.tool(
-        name="list_activities",
-        description="List the user's recent activities (runs, rides, swims, strength, etc.).",
-    )(activities.list_activities)
-    mcp.tool(
-        name="get_period_summary",
+        name="get-recent-activities",
         description=(
-            "Compact aggregate stats for a date window — counts, totals, averages "
-            "(distance, time, pace, HR, cadence, power, elevation, longest activity). "
-            "Args: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), runOnly (bool, optional), "
-            "provider (\"garmin\"/\"strava\"/\"all\", optional). Use this for "
-            "'how much did I run last month' / 'summarise my last 6 weeks' style questions."
+            "List the user's recent activities (runs, rides, swims, strength, etc.) "
+            "with summary metrics. Use for 'show me my last N workouts' style questions."
         ),
-    )(period_summary.get_period_summary)
+    )(activities.list_activities)
+
     mcp.tool(
-        name="get_activity",
-        description="Return the full record (including splits/laps) for one activity by id.",
+        name="get-activity-details",
+        description=(
+            "Return the full record for one activity by id — distance, time, pace, "
+            "HR (avg + max), cadence, power, elevation, cardiac drift, pace decay, "
+            "polarized score, HR-zone breakdown, weather, raw provider payload."
+        ),
     )(activities.get_activity)
+
     mcp.tool(
-        name="get_training_volume",
-        description="Aggregate training load over a window: total km, hours, sessions, per-sport breakdown.",
-    )(activities.get_training_volume)
-    mcp.tool(
-        name="get_activity_splits",
-        description="Per-lap breakdown for one activity — HR, pace, cadence, power, elevation. Use to spot cardiac drift, pace decay, or verify if a structured workout hit its targets.",
+        name="get-run-splits",
+        description=(
+            "Per-lap breakdown for one activity — HR, pace, cadence, power, elevation "
+            "per split. Use to spot cardiac drift, pace decay, or verify whether a "
+            "structured workout hit its prescribed splits."
+        ),
     )(activities.get_activity_splits)
 
-    # ---- Recovery / wellness ----
     mcp.tool(
-        name="get_recovery_snapshot",
-        description="Latest recovery state (sleep, HRV, readiness, body battery) plus deltas vs. the user's 7-day baseline.",
-    )(recovery.get_recovery_snapshot)
-    mcp.tool(
-        name="get_sleep",
-        description="Sleep history for the last N days: per-night hours + score and the window average.",
-    )(recovery.get_sleep)
-    mcp.tool(
-        name="get_hrv_trend",
-        description="HRV (rMSSD) per day with a 7-day rolling baseline — useful for spotting multi-day drops that signal overtraining.",
-    )(recovery.get_hrv_trend)
+        name="get-period-summary",
+        description=(
+            "Compact aggregate stats for a date window — counts, totals, weighted-average "
+            "pace, mean HR/cadence/power, total elevation, longest single activity. "
+            "Args: startDate (YYYY-MM-DD), endDate (YYYY-MM-DD), runOnly (bool, optional), "
+            "provider (\"garmin\"/\"strava\"/\"all\", optional, default 'all' which dedupes "
+            "Strava↔Garmin twins). Use for 'how much did I run last month' style questions."
+        ),
+    )(period_summary.get_period_summary)
 
-    # ---- Plans & performance ----
+    # ── 7-9. Point-lookup latest-X tools ──
     mcp.tool(
-        name="get_planned_workouts",
-        description="Upcoming structured workouts from the user's active training plan (with rationale per session).",
+        name="get-latest-run",
+        description=(
+            "Return the user's most recent running activity with all key metrics "
+            "(distance, pace, HR, cadence, power, elevation, training effect, "
+            "cardiac drift, polarized score, HR-zone breakdown)."
+        ),
+    )(latest.get_latest_run)
+
+    mcp.tool(
+        name="get-latest-sleep",
+        description=(
+            "Return last night's sleep (duration, score, HRV, resting HR, readiness, "
+            "body battery, SpO2) plus the 7-day rolling baseline so deviations are obvious."
+        ),
+    )(latest.get_latest_sleep)
+
+    mcp.tool(
+        name="get-latest-body",
+        description=(
+            "Return the user's most recent body composition snapshot — weight, body fat %, "
+            "muscle mass, plus profile fields (height, sex, age, max HR, resting HR)."
+        ),
+    )(latest.get_latest_body)
+
+    # ── 10. Planned workouts read ──
+    mcp.tool(
+        name="get-planned-workouts",
+        description=(
+            "Upcoming structured workouts from the user's active training plan, with "
+            "per-session rationale, target zones, prescribed pace/distance/duration."
+        ),
     )(plans.get_planned_workouts)
-    mcp.tool(
-        name="get_current_plan",
-        description="Summary of the user's active plan: race goal, current phase, philosophy, week-of-plan.",
-    )(plans.get_current_plan)
-    mcp.tool(
-        name="get_performance_summary",
-        description="Latest physiological snapshot — CTL/ATL/TSB/ACWR — plus the current detected limiter.",
-    )(plans.get_performance_summary)
 
-    # ---- Deep performance baseline (Garmin's own estimates) ----
+    # ── 11-12. Planned workouts write ──
     mcp.tool(
-        name="get_performance_baseline",
-        description="Garmin's physiological estimates: VO2max, lactate threshold (HR + pace), race predictions (5k/10k/HM/M), training status (productive/peaking/overreaching), endurance & hill scores, fitness age, FTP. Use to ground intensity/goal recommendations in actual ceilings.",
-    )(performance.get_performance_baseline)
-    mcp.tool(
-        name="get_personal_records",
-        description="The user's personal records from Garmin (best 5k, 10k, half marathon, marathon, longest run, biggest climb, best power efforts). Use when discussing realistic race goals or progression.",
-    )(performance.get_personal_records)
-    mcp.tool(
-        name="get_stress_trend",
-        description="Daily stress (Garmin all-day stress) + body battery + SpO2 over a window. High stress compounding with training load = elevated illness/injury risk.",
-    )(performance.get_stress_trend)
-    mcp.tool(
-        name="get_zone_distribution",
-        description="Aggregate time-in-HR-zones across all workouts in a window, plus polarized-training compliance score (% in z1+z2 vs. z4+z5). Use to verify whether the user's training is actually polarized vs. stuck in the moderate-intensity 'grey zone'.",
-    )(performance.get_zone_distribution)
-    mcp.tool(
-        name="get_fitness_timeline",
-        description="Daily CTL (fitness) / ATL (fatigue) / TSB (form) / ACWR (injury risk) series — the Banister/Coggan-style training load model. Use to assess fitness trend, detect overreaching (high ATL + negative TSB), or judge readiness for a hard block.",
-    )(performance.get_fitness_timeline)
-
-    # ---- Limiter engine ----
-    mcp.tool(
-        name="get_current_limiter",
-        description="Latest AI-detected primary limiter (aerobic_capacity / lactate_threshold / muscular_endurance / running_economy / anaerobic_capacity / recovery / neuromuscular) with confidence, evidence, physiology explanation, and recommended training focus. Use to justify session prescriptions or explain training direction.",
-    )(limiter.get_current_limiter)
-    mcp.tool(
-        name="get_limiter_history",
-        description="All limiter determinations in a window — shows whether the athlete's bottleneck has shifted over time.",
-    )(limiter.get_limiter_history)
-
-    # ---- Derived metrics + trends + post-workout AI ----
-    mcp.tool(
-        name="get_athlete_metrics",
-        description="EvolveRun's own derived metrics: VDOT, VO2max estimate, threshold pace+HR, running economy proxy (s/km per bpm), fatigue resistance (0-100), recovery capacity (0-100). Use to ground recommendations in athlete-specific physiology.",
-    )(metrics.get_athlete_metrics)
-    mcp.tool(
-        name="get_metric_trends",
-        description="4 / 8 / 12-week trend cards for every key metric (VO2max, CTL, HRV, sleep, threshold pace, running economy, fatigue resistance, weekly volume, polarized %). Each card includes direction, delta %, and whether the move is good for that metric.",
-    )(metrics.get_metric_trends)
-    mcp.tool(
-        name="get_post_workout_briefings",
-        description="Recent AI-generated debriefs for key sessions (long runs, intervals, threshold, race) with verdict, what-went-well, watch-outs, and next-session adjustment.",
-    )(metrics.get_post_workout_briefings)
-
-    # ---- Chart-ready trend aggregates (Chirona-style visualizations) ----
-    mcp.tool(
-        name="get_easy_run_trend",
+        name="push-planned-workout",
         description=(
-            "Month-by-month easy-run pace and HR — designed for chart rendering. "
-            "Returns a `series` array with per-month {pace_s_per_km, pace_display, hr_bpm, "
-            "easy_runs, total_distance_km} plus a `chart_hint` block. Use this when the "
-            "athlete asks about pace progress, aerobic efficiency, or month-over-month "
-            "trends. Render the result as a bar+line chart artifact (pace bars with HR overlay)."
+            "Add a planned workout to the user's active training plan. "
+            "Args: scheduled_date (YYYY-MM-DD), session_type (easy/long/tempo/threshold/"
+            "intervals/vo2max/fartlek/hills/recovery/race/strength/cross_training/rest), "
+            "sport (default 'running'), duration_min, distance_m, description, rationale."
         ),
-    )(metrics.get_easy_run_trend)
+    )(plan_crud.push_planned_workout)
+
     mcp.tool(
-        name="compare_periods",
+        name="delete-planned-workout",
         description=(
-            "Compare a metric across the last N weeks vs the equivalent prior block. "
-            "Supported metrics: volume_km, sessions, avg_easy_pace, tss, avg_hrv. "
-            "Returns current vs previous values, delta %, and direction. Render as "
-            "side-by-side bars when the user asks 'how did this week/month compare?'."
+            "Remove a planned workout by its id. Use when the athlete asks to drop a "
+            "session, or when overwriting the auto-generated plan with a different "
+            "session for that day (delete first, then push)."
         ),
-    )(metrics.compare_periods)
+    )(plan_crud.delete_planned_workout)
 
     return mcp
 
@@ -239,13 +200,12 @@ def main() -> None:
 
     logging.basicConfig(
         level=logging.INFO,
-        stream=sys.stderr,  # stdio uses stdout for the protocol — keep logs off it
+        stream=sys.stderr,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
     log = logging.getLogger("mcp_server")
 
     transport = args.transport
-    # 'http' is a friendly alias.
     if transport == "http":
         transport = "streamable-http"
 

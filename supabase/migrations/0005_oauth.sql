@@ -31,6 +31,9 @@ create table if not exists public.oauth_clients (
 
 create index if not exists oauth_clients_client_id_idx on public.oauth_clients(client_id);
 
--- We deliberately don't enable RLS here — OAuth clients aren't user-scoped.
--- They're application identities, not end-user resources. The backend reads
--- them with the service-role key and the frontend never touches the table.
+-- OAuth clients are application identities, not user-scoped resources. The
+-- frontend never reads this table; only the backend touches it (with the
+-- service-role key, which bypasses RLS). We still enable RLS with zero
+-- policies so an accidental anon/authenticated query gets a deny rather
+-- than silently exposing redirect_uris and client metadata.
+alter table public.oauth_clients enable row level security;
