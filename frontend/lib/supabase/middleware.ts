@@ -34,10 +34,7 @@ export async function updateSession(request: NextRequest) {
   // `/oauth/consent` is auth-required because we need to know who's granting
   // access to the client. `/oauth/*` other paths (none for now) would also
   // sit behind login.
-  const isProtected =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/oauth/") ||
-    pathname.startsWith("/onboarding");
+  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/oauth/");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

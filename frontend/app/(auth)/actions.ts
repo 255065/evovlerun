@@ -54,10 +54,7 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   }
 
   revalidatePath("/", "layout");
-  // New signups always go through the 5-question wizard before landing on
-  // the dashboard. Existing users (who already have an `onboarded_at` row)
-  // go straight to /dashboard via the login path.
-  redirect("/onboarding");
+  redirect("/dashboard");
 }
 
 export async function logoutAction() {

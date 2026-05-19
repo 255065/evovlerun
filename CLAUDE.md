@@ -23,8 +23,10 @@ We DO in V1:
 - `save-training-plan` as the single atomic plan-write tool
 - Hosted OAuth 2.1 + PKCE so claude.ai's "Add custom connector" → Connect
   flow works end-to-end
-- Marketing landing page + 5-question onboarding wizard
+- Marketing landing page (`/`) — signups go straight to `/dashboard`
 - Stripe Checkout subscription from day 1 (~€9–14/mo, no free tier)
+- (5-question onboarding wizard rolled back — deferred to V2 once we have
+  a place to surface the answers, e.g. into the coaching-guide tool)
 
 ## V2 mission (after first paying customers retain)
 

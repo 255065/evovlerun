@@ -84,8 +84,11 @@ In priority order — tick top-down:
 
 ### Must-ship (blockers)
 - [x] **Landing page** at `/` — Vercel-style hero, Strava-only positioning
-- [x] **Onboarding wizard** at `/onboarding` — 5 questions, Strava-only Q3,
-      kicks off Strava OAuth on finish
+- [~] ~~**Onboarding wizard** at `/onboarding`~~ — built, then rolled
+      back because the answers didn't feed into anything actionable.
+      Profile columns from migration 0006 still exist for V2; the route
+      now just redirects to `/dashboard`. Re-enable when we wire the
+      answers into `conversation-initialisation-critical-instructions`.
 - [x] **Disable Garmin connector** in UI — card hidden from
       `/dashboard/connections`, `/dashboard/connections/garmin` redirects
 - [x] **Replace dashboard root** with Vercel-style layout
