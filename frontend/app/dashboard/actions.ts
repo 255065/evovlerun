@@ -42,19 +42,6 @@ export type FitnessTimeline = {
   points: FitnessPoint[];
 };
 
-export type LimiterCall = {
-  available: boolean;
-  detected_at?: string;
-  primary_limiter?: string;
-  secondary_limiter?: string | null;
-  confidence?: number;
-  recommended_focus?: string | null;
-  key_observations?: string[];
-  supporting_data_points?: string[];
-  physiology_explanation?: string | null;
-  alternative_considered?: string | null;
-};
-
 export type PlannedSession = {
   scheduled_date: string;
   session_type: string;
@@ -109,10 +96,6 @@ export async function loadFitnessTimeline(days = 90): Promise<FitnessTimeline | 
   return backendGet<FitnessTimeline>(`/performance/timeline?days=${days}`);
 }
 
-export async function loadLatestLimiter(): Promise<LimiterCall | null> {
-  return backendGet<LimiterCall>("/limiter/latest");
-}
-
 export async function loadCurrentPlan(): Promise<CurrentPlan | null> {
   return backendGet<CurrentPlan>("/training/plan/current");
 }
@@ -157,42 +140,6 @@ export async function loadLatestRecovery(): Promise<{
 }
 
 // ---- Mutations -----------------------------------------------------------
-export async function runLimiterAnalysis(): Promise<{ ok: boolean; error?: string }> {
-  const token = await getToken();
-  if (!token) return { ok: false, error: "Not authenticated" };
-  const res = await fetch(`${BACKEND_URL}/limiter/analyze`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    return { ok: false, error: `${res.status}: ${await res.text()}` };
-  }
-  return { ok: true };
-}
-
-export async function generatePlan(input: {
-  race_type: string;
-  race_date: string;
-  target_time_seconds?: number;
-  philosophy: string;
-  expand_first_n_weeks?: number;
-}): Promise<{ ok: boolean; plan_id?: string; error?: string }> {
-  const token = await getToken();
-  if (!token) return { ok: false, error: "Not authenticated" };
-  const res = await fetch(`${BACKEND_URL}/training/plan`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(input),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    return { ok: false, error: `${res.status}: ${await res.text()}` };
-  }
-  const data = (await res.json()) as { plan_id: string };
-  return { ok: true, plan_id: data.plan_id };
-}
-
 export async function updateProfile(patch: Partial<Profile>): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {

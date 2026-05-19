@@ -52,9 +52,9 @@ star; V1 is the wedge.
   user-scoped table.
 - **AI (V1)**: None directly. The MCP connector lets the user's own
   Claude/ChatGPT/Gemini account do the reasoning over our data tools.
-- **AI (V2 hooks)**: LLM abstraction (`app/services/llm/`) already
-  supports Anthropic and MiniMax-M2.5. Re-enable when we ship the
-  limiter engine / 4-week review as paid features.
+  All onboard-LLM code (Anthropic + MiniMax clients, plan_generator,
+  limiter_engine, post_workout_engine) was removed in V1 cleanup —
+  bringing it back is the V2 hook for premium analytics features.
 - **Integrations (V1)**: Strava only. We "inherit" Garmin/Apple/Polar/
   Coros/Suunto/Wahoo because they all auto-sync to Strava.
 - **Integrations (V2)**: Garmin official partner, Oura, WHOOP, Polar

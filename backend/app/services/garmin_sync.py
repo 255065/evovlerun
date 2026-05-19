@@ -19,7 +19,6 @@ from datetime import date, datetime, timedelta, timezone
 from app.services.connections import load_tokens, mark_status
 from app.services.metrics_engine import compute_all_metrics
 from app.services.performance import recompute_for_user
-from app.services.post_workout_engine import analyze_recent_workouts
 from app.services.profile_sync import sync_profile_from_provider
 from app.services.providers.base import ProviderAuthError, ProviderRateLimitError
 from app.services.providers.garmin import GarminProvider
@@ -180,14 +179,8 @@ async def sync_full(
             log.warning("metrics compute failed for %s: %s", user_id, exc)
             report["errors"].append(f"metrics: {exc}")
 
-        # 9) Post-workout AI for any new key sessions in the last 48h.
-        #    Costs ~1 LLM call per new key session; we skip silent days entirely.
-        try:
-            pw = analyze_recent_workouts(user_id=user_id, since_hours=48)
-            report["post_workout_analyses"] = pw.get("analyzed", 0)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("post-workout analysis failed for %s: %s", user_id, exc)
-            report["errors"].append(f"post_workout: {exc}")
+        # (V1: onboard LLM analysis removed. The MCP chat assistant does
+        # any narrative interpretation now; we just keep the data fresh.)
 
     except ProviderAuthError as exc:
         log.warning("garmin auth failed for user %s: %s", user_id, exc)

@@ -26,21 +26,10 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_jwt_secret: str = ""
 
-    # LLM provider selection: "anthropic" or "minimax".
-    llm_provider: str = "anthropic"
-
-    # Anthropic
-    anthropic_api_key: str = ""
-    anthropic_model_reasoning: str = "claude-sonnet-4-6"
-    anthropic_model_deep: str = "claude-opus-4-7"
-    anthropic_model_bulk: str = "claude-haiku-4-5"
-
-    # MiniMax (OpenAI-compatible API)
-    minimax_api_key: str = ""
-    minimax_base_url: str = "https://api.minimax.io/v1"
-    minimax_model_reasoning: str = "MiniMax-M2.5"
-    minimax_model_deep: str = "MiniMax-M2.5"
-    minimax_model_bulk: str = "MiniMax-M2.5"
+    # V1 has no onboard LLM — the chat assistant (Claude.ai / ChatGPT /
+    # Gemini) does the reasoning over our MCP tool surface. The Anthropic
+    # and MiniMax client code was deleted; bringing it back is the V2
+    # hook for the limiter engine and 4-week reviews.
 
     # Token encryption for OAuth credentials
     token_encryption_key: str = ""
