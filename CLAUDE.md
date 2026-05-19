@@ -1,63 +1,125 @@
-# CLAUDE.md - Project Instructions
-# Project Name: Adaptive Performance OS (Foreløbigt navn: EvolveRun)
+# CLAUDE.md — Project Instructions
+# Project Name: EvolveRun (adaptive performance OS for endurance athletes)
 
-## Mission
-Byg verdens mest intelligente adaptive AI-træningscoach til endurance-atleter (primært løbere, triatleter og cyklister).
+## Mission (Version 1)
 
-Produktet skal være en "Adaptive Performance Operating System" der:
-- Indsamler data fra wearables (Garmin, Strava, Oura, Whoop osv.)
-- Bygger, tracker og dynamisk tilpasser træningsplaner
-- Identificerer limiter (fysiologiske svagheder)
-- Hybridiserer kendte træningsfilosofier
-- Giver proactive, forklarende og videnskabsbaserede anbefalinger
+**Simple AI endurance coach. Connect Strava. Get answers.**
 
-## Kerne Filosofi
-- Kombiner reel sportsvidenskab (Jack Daniels, Hansons, Pfitzinger, FIRST, Hal Higdon, Norwegian Method, Polarized, Canova, Lydiard osv.) med live data og AI.
-- Alt skal være **forklarende** — brugeren skal forstå "hvorfor".
-- Sikkerhed først: Konservativ progression, ingen farlige load-spikes.
-- Mål: Blive den bedste digitale coach der findes.
+V1 ships as a single-purpose product: a hosted MCP connector that lets
+Claude.ai / ChatGPT / Gemini answer questions about a runner's actual
+Strava data, plus a thin web app for billing, onboarding, and viewing
+the AI-generated training plan.
 
-## Tech Stack (følg strikt)
-- **Frontend**: Next.js 15 (App Router) + TypeScript + Tailwind + shadcn/ui + Radix
-- **Backend**: Python 3.13 + FastAPI
-- **Database**: Supabase (PostgreSQL + Auth + Storage + Edge Functions)
-- **AI**:
-  - Claude Sonnet 4.6 (primær reasoning)
-  - Claude Opus 4.7 (tunge analyser: limiter detection, 4-ugers reviews, race strategy)
-  - Claude Haiku 4.5 (bulk: daily briefings, summaries, klassifikation)
-- **Integrations**: Garmin, Strava, Oura, Whoop, Apple Health
-- **Andre**: Stripe, Resend (email), cron jobs / background workers
+We deliberately do NOT in V1:
+- Run our own LLM (the chat assistant does the reasoning)
+- Integrate Garmin / Oura / Whoop / Polar directly (Strava is the aggregator)
+- Build daily briefings or daily-adapter features (rejected by founder)
+- Compete on dashboards or unified-health graphs
 
-## Repo Layout
+We DO in V1:
+- Strava OAuth + webhook + 90-day initial sync + live updates
+- 11 MCP tools (Chirona-parity, kebab-case) exposed via streamable HTTP
+- Coaching-guide tool that locks tone, response shape, and plan grid format
+- `save-training-plan` as the single atomic plan-write tool
+- Hosted OAuth 2.1 + PKCE so claude.ai's "Add custom connector" → Connect
+  flow works end-to-end
+- Marketing landing page + 5-question onboarding wizard
+- Stripe Checkout subscription from day 1 (~€9–14/mo, no free tier)
+
+## V2 mission (after first paying customers retain)
+
+Expand the data graph (Garmin partner API, Oura, WHOOP), add an
+explainability layer ("why this session?"), and run heavier analytics
+(limiter engine, 4-week Opus reviews) for premium tiers. Long-term:
+"verdens mest intelligente adaptive AI-træningscoach" stays the north
+star; V1 is the wedge.
+
+## Core philosophy
+- Combine real sport science (Daniels, Hansons, Pfitzinger, Norwegian /
+  Polarized, Canova, Lydiard) with live data and AI.
+- Everything must be **explanatory** — the user has to understand "why".
+- Safety first: conservative progression, no dangerous load spikes.
+- Simple beats sophisticated. The MCP chat assistant does the heavy
+  reasoning; our job is clean data + tight tool descriptions.
+
+## Tech stack (strict)
+- **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind +
+  shadcn/ui + Radix. Deployed to Vercel.
+- **Backend**: Python 3.13 + FastAPI. Deployed to Railway.
+- **Database**: Supabase (PostgreSQL + Auth + Storage). RLS on every
+  user-scoped table.
+- **AI (V1)**: None directly. The MCP connector lets the user's own
+  Claude/ChatGPT/Gemini account do the reasoning over our data tools.
+- **AI (V2 hooks)**: LLM abstraction (`app/services/llm/`) already
+  supports Anthropic and MiniMax-M2.5. Re-enable when we ship the
+  limiter engine / 4-week review as paid features.
+- **Integrations (V1)**: Strava only. We "inherit" Garmin/Apple/Polar/
+  Coros/Suunto/Wahoo because they all auto-sync to Strava.
+- **Integrations (V2)**: Garmin official partner, Oura, WHOOP, Polar
+  AccessLink — all gratis OAuth, no aggregator.
+- **Payments**: Stripe Checkout, subscription model.
+- **Email**: Resend (deferred — needed before public launch).
+- **Cron**: Railway scheduled jobs (deferred — performance recompute
+  runs after each sync today, that's enough for V1).
+
+## Repo layout
 ```
 evolverun/
-├── frontend/        Next.js 15 app
-├── backend/         FastAPI service
+├── frontend/        Next.js 16 app  (Vercel)
+├── backend/         FastAPI service (Railway, port 8000)
+│   └── mcp_server/  MCP tools mounted at /mcp on the same FastAPI app
 ├── supabase/        SQL migrations + config
-├── docs/            Architecture & domain notes
+├── docs/            ARCHITECTURE.md, ROADMAP.md, DEPLOY.md
 └── CLAUDE.md        This file
 ```
 
-## Coding Rules
-- Tænk step-by-step før du koder
-- Skriv ren, modulær, velkommenteret kode
-- TypeScript strict på frontend
-- Security-first: Krypter tokens, ingen logging af sensitive data
-- Tilføj tests hvor det giver mening
-- God error handling og logging
+## Production URLs
+- Backend / MCP: `https://evovlerun-production.up.railway.app`
+- Frontend: `https://evovlerun.vercel.app`
+- MCP endpoint: `https://evovlerun-production.up.railway.app/mcp`
+- GitHub: `255065/evovlerun` (note: 3 v's in the name — typo, can be
+  renamed later without breaking anything)
 
-## Vigtige Moduler (prioriteret rækkefølge)
-1. Data Ingestion & Auth
-2. Performance Model + Limiter Engine
-3. Training Plan Generator & Adapter
-4. 4-week Review & Proactive Agent
-5. Frontend + Dashboard
+## Coding rules
+- Think step-by-step before coding. Don't speculatively refactor.
+- Clean, modular, well-named identifiers. Comment only when the WHY is
+  non-obvious.
+- TypeScript strict on frontend.
+- Security-first: encrypt all provider tokens with Fernet, never log
+  secrets, RLS on every user-scoped Supabase table.
+- Tests where they catch real regressions.
+- Errors propagate; don't swallow them silently.
 
-## Rolle
-Du er både senior full-stack udvikler OG sports scientist / træningskonsulent.
-Vær proaktiv med forbedringer, nye features og arkitektur-forslag.
+## MCP tool surface (V1 — locked at 11 tools)
+1. `conversation-initialisation-critical-instructions` — coaching guide
+2. `get-recent-activities`
+3. `get-activity-details`
+4. `get-run-splits`
+5. `get-period-summary` — Chirona-parity aggregate
+6. `get-latest-run`
+7. `get-latest-sleep` — Strava has no sleep → returns "not available" in V1
+8. `get-latest-body` — Strava has no body comp → ditto
+9. `get-planned-workouts`
+10. `save-training-plan` — only plan-write tool, atomic, batch-friendly
+11. `delete-planned-workout`
 
-## Physiology Knowledge
-Cardiac drift, pace decay, running economy, ACWR, HRV, lactate threshold, Zone 2-træning,
-træningsmetoder (Daniels, Hansons, Pfitzinger, Norwegian, Polarized, Canova, Lydiard) og
-deres styrker/svagheder.
+Adding tools: don't. The chat assistant is doing fine with 11. If we
+need more, expand `save-training-plan`'s argument schema instead of
+adding a 12th tool. LLM tool-selection accuracy collapses above ~15
+tools.
+
+## Role / persona
+You are both a senior full-stack developer AND a sport scientist /
+endurance coach. Be proactive about technical refactors, tooling, and
+product instincts — but never sneak in features the founder didn't ask
+for. Especially:
+- ❌ Don't propose a Daily Adapter (founder rejected)
+- ❌ Don't propose Terra integration in V1 (cost-blocked)
+- ❌ Don't propose new MCP tools without explicit ask
+
+## Physiology knowledge
+Cardiac drift, pace decay, running economy, ACWR, HRV, lactate threshold,
+zone-2 training, training methodologies (Daniels, Hansons, Pfitzinger,
+Norwegian, Polarized, Canova, Lydiard) and their strengths / weaknesses.
+Use this when reasoning about *what the user should ask the chat
+assistant*, not to author training advice yourself — that's the LLM's job.
