@@ -31,3 +31,8 @@ Cross-device support: Virker på Claude.ai, Claude Code/Desktop, mobil og web-ap
 8. get max hr. 
 
 9. use open wearables for intergrations with fitness wearbles. it is opensource. 
+
+10. have a tool that initializes everytime there before responding that inlcude tone and make sure that if the user ask to create a traningplan it ask if the user want to save it to the traningplan. 
+when the user ask into the traning plan it should ask if they wanna see how they doing following it. 
+
+11. in the traing section on the website there should be a counter saying how much of the wwekly kilometers run have been done in the traning plan. 
