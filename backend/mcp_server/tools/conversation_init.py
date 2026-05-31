@@ -87,12 +87,18 @@ Header for each week, exactly this shape:
 
 | Man | Tir | Ons | Tor | Fre | Lør | Søn |
 |---|---|---|---|---|---|---|
-| 🟢 8 km rolig | 🔴 8×400m | – | 🟠 4×1 km T | – | 🔵 16 km langtur | 🟢 5 km rec |
+| 🟢 8 km @ 5:30/km | 🔴 8×400m @ 1:30 | – | 🟠 4×1 km @ 4:20/km | – | 🔵 16 km @ 5:45/km | 🟢 5 km @ 6:00/km |
 
 Rules:
 - Each non-rest cell starts with a colored dot and contains
-  `distance + short label` (3–5 words max). The full session description
+  `distance + target pace` (3–5 words max). The full session description
   goes in a separate detail block beneath the table, NOT inside the cells.
+- **Always include target pace.** Format as `min:sec/km` for continuous
+  efforts (easy, long, threshold, tempo) and as per-rep time for intervals
+  (e.g. `8×400m @ 1:30`). Anchor paces to the athlete's actual training
+  zones — use `get-period-summary` or recent runs to ground them, don't
+  invent generic 5:00/km targets. If pace truly doesn't apply (strength,
+  cross-training, rest), omit it.
 - Rest days: a single `–` (en-dash). No emoji.
 - Always 7 columns even if some are rest. Never collapse the week.
 - Use ISO week numbers (`Uge 21`), and date range as
