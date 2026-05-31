@@ -21,9 +21,8 @@ export default async function LandingPage({
       <Nav />
       <Hero />
       <ProofBar />
-      <ConnectorDemo />
+      <PaceTrendDemo />
       <HowItWorks />
-      <PromptGrid />
       <Pricing />
       <Footer />
     </main>
@@ -39,14 +38,11 @@ function Nav() {
           EvolveRun
         </Link>
         <nav className="hidden items-center gap-7 text-[13.5px] text-[#5f564d] md:flex">
-          <a href="#demo" className="hover:text-[#1a1612]">
-            Demo
-          </a>
           <a href="#how-it-works" className="hover:text-[#1a1612]">
             How it works
           </a>
-          <a href="#prompts" className="hover:text-[#1a1612]">
-            Prompts
+          <a href="#integrations" className="hover:text-[#1a1612]">
+            Integrations
           </a>
           <a href="#pricing" className="hover:text-[#1a1612]">
             Pricing
@@ -54,13 +50,13 @@ function Nav() {
         </nav>
         <div className="flex items-center gap-3">
           <Link href="/login" className="hidden text-[13.5px] text-[#5f564d] hover:text-[#1a1612] sm:inline">
-            Log in
+            Login
           </Link>
           <Link
             href="/signup"
             className="rounded-full bg-[#1a1612] px-4 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#2b251f]"
           >
-            Start free trial
+            Get started
           </Link>
         </div>
       </div>
@@ -90,107 +86,109 @@ function Hero() {
       <div>
         <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#1a1612]/10 bg-white/55 px-3 py-1.5 text-[13px] text-[#5f564d]">
           <span className="h-2 w-2 rounded-full bg-[#fc4c02]" />
-          Built for Strava athletes using Claude or ChatGPT
+          Understand your training with AI
         </div>
-        <h1 className="evr-headline max-w-[10.8ch] text-[clamp(52px,8.5vw,92px)] leading-[0.95] tracking-[-0.055em]">
-          Your AI coach, powered by <span className="text-[#dc6b3f]">Strava.</span>
+        <h1 className="evr-headline max-w-[12ch] text-[clamp(46px,7.5vw,84px)] leading-[0.96] tracking-[-0.05em]">
+          Connect Strava to <span className="text-[#dc6b3f]">ChatGPT &amp; Claude</span>
         </h1>
-        <p className="mt-7 max-w-xl text-[18px] leading-relaxed text-[#5f564d] sm:text-[19px]">
+        <p className="mt-6 text-[20px] font-medium text-[#1a1612] sm:text-[22px]">
+          Understand your training with AI.
+        </p>
+        <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-[#5f564d] sm:text-[18px]">
           EvolveRun turns your Strava history into a secure connector for the AI you already use.
-          Ask Claude or ChatGPT about your training, splits, fatigue, weekly load, and race prep
-          without exporting a single CSV.
+          Ask Claude or ChatGPT about your runs, splits, fatigue, and weekly load — no exports, no
+          new dashboard to learn.
         </p>
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/signup"
             className="inline-flex h-12 items-center justify-center rounded-full bg-[#1a1612] px-6 text-[14.5px] font-medium text-white shadow-sm transition hover:bg-[#2b251f]"
           >
-            Connect Strava
+            Get started
           </Link>
           <a
-            href="#demo"
+            href="#how-it-works"
             className="inline-flex h-12 items-center justify-center rounded-full border border-[#1a1612]/12 bg-white/50 px-6 text-[14.5px] font-medium text-[#1a1612] transition hover:bg-white"
           >
-            See what it answers
+            See how it works
           </a>
         </div>
         <p className="mt-5 max-w-lg text-[12.5px] leading-relaxed text-[#7a7168]">
-          Works through Strava with Garmin, Apple Watch, Polar, COROS, Suunto, Wahoo, Zwift and
-          other devices that already sync there.
+          Works with Garmin, Apple Watch, Polar, COROS, Suunto, Wahoo and anything that syncs to
+          Strava.
         </p>
       </div>
 
       <div className="relative">
-        <TrainingSnapshot />
+        <PaceTrendChat />
       </div>
     </section>
   );
 }
 
-function TrainingSnapshot() {
+/** Static chat-window mockup: user asks about easy-run pace trends, Claude
+ * answers using EvolveRun tools and shows the Jan–March progression. Reused
+ * in the hero (right column). No client state — faithful static markup. */
+function PaceTrendChat() {
   return (
-    <div className="rounded-[28px] border border-[#1a1612]/10 bg-[#1a1612] p-3 shadow-2xl shadow-[#1a1612]/15">
-      <div className="rounded-[22px] bg-[#f8f4ed] p-4 sm:p-5">
-        <div className="flex items-center justify-between border-b border-[#1a1612]/10 pb-4">
-          <div>
-            <div className="text-[12px] font-medium uppercase tracking-[0.18em] text-[#8a7f74]">
-              EvolveRun connector
-            </div>
-            <div className="mt-1 text-[18px] font-semibold tracking-[-0.02em]">
-              Training context ready
-            </div>
-          </div>
-          <span className="rounded-full bg-[#fc4c02] px-3 py-1 text-[11px] font-semibold text-white">
-            Strava
-          </span>
+    <div className="overflow-hidden rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] shadow-2xl shadow-[#1a1612]/15">
+      <div className="flex items-center gap-2 border-b border-[#1a1612]/10 px-4 py-3">
+        <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+        <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
+        <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+        <span className="ml-3 text-[12px] text-[#7a7168]">claude.ai · EvolveRun connected</span>
+      </div>
+      <div className="space-y-4 p-5 sm:p-6">
+        <ChatBubble who="You">
+          How has my easy-run pace trended since January?
+        </ChatBubble>
+        <ToolCall name="get-period-summary" detail="Jan–Mar · easy runs" />
+        <ToolCall name="get-run-splits" detail="pace + heart rate" />
+        <ChatBubble who="Claude" muted>
+          Your easy pace has steadily improved from January to March while heart rate has come down
+          slightly. Aerobic efficiency is improving — you are holding the same effort at a lower
+          heart rate.
+        </ChatBubble>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Insight label="Easy pace" value="5:23 → 5:08" unit="/km" tone="good" />
+          <Insight label="Avg HR" value="149 → 145" unit="bpm" tone="good" />
         </div>
-
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <Metric label="Last 30 days" value="247 km" />
-          <Metric label="Avg pace" value="5:18/km" />
-          <Metric label="Runs" value="21" />
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-[#1a1612]/10 bg-white/70 p-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 h-8 w-8 rounded-full bg-[#dc6b3f]/15" />
-            <div>
-              <div className="text-[13px] font-semibold">Claude used 3 EvolveRun tools</div>
-              <p className="mt-1 text-[13px] leading-relaxed text-[#62584f]">
-                get-period-summary, get-run-splits, get-planned-workouts
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl bg-[#1a1612] p-4 text-white">
-          <div className="text-[12px] text-white/55">Answer preview</div>
-          <p className="mt-2 text-[14px] leading-relaxed text-white/88">
-            Your last two long runs show stable pace but rising HR after 75 minutes. I would keep
-            Saturday aerobic, then add controlled threshold on Tuesday.
+        <div className="rounded-2xl border border-[#dc6b3f]/25 bg-[#dc6b3f]/8 p-4">
+          <p className="text-[13.5px] leading-relaxed text-[#7a4225]">
+            Conclusion: aerobic efficiency improving — same pace at lower HR.
           </p>
-        </div>
-
-        <div className="mt-5 flex items-end gap-2">
-          {[34, 52, 46, 63, 57, 72, 68, 78, 65, 86, 74, 82].map((h, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-t-md bg-[#dc6b3f]"
-              style={{ height: `${h}px`, opacity: 0.35 + i * 0.045 }}
-            />
-          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function PaceTrendDemo() {
   return (
-    <div className="rounded-2xl border border-[#1a1612]/10 bg-white/65 p-3">
-      <div className="text-[11px] text-[#7a7168]">{label}</div>
-      <div className="mt-1 text-[18px] font-semibold tracking-[-0.03em]">{value}</div>
-    </div>
+    <section id="integrations" className="mx-auto grid max-w-7xl gap-10 px-5 py-24 sm:px-8 lg:grid-cols-[0.86fr_1.14fr]">
+      <div>
+        <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#dc6b3f]">
+          See it in your chat
+        </div>
+        <h2 className="evr-headline mt-4 max-w-lg text-[clamp(36px,5vw,58px)] tracking-[-0.04em]">
+          Ask. EvolveRun answers from your real data.
+        </h2>
+        <p className="mt-5 max-w-xl text-[16.5px] leading-relaxed text-[#5f564d]">
+          The analysis happens inside the AI you already use. EvolveRun gives Claude and ChatGPT a
+          small set of reliable tools over your Strava history — recent activities, splits, and
+          period summaries — so the answers are grounded in your training, not generic advice.
+        </p>
+        <div className="mt-8 grid gap-3">
+          <ValueLine title="Connect Strava" body="One OAuth connection imports your activities and keeps syncing." />
+          <ValueLine title="Add the connector" body="Add EvolveRun as a custom connector inside Claude, ChatGPT, or Gemini." />
+          <ValueLine title="Ask questions" body="Pace trends, fatigue, weekly load, race prep — answered from your data." />
+        </div>
+      </div>
+
+      <div className="relative">
+        <PaceTrendChat />
+      </div>
+    </section>
   );
 }
 
@@ -214,56 +212,6 @@ function ProofBar() {
             {item}
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function ConnectorDemo() {
-  return (
-    <section id="demo" className="mx-auto grid max-w-7xl gap-10 px-5 py-24 sm:px-8 lg:grid-cols-[0.86fr_1.14fr]">
-      <div>
-        <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#dc6b3f]">
-          Connector-first
-        </div>
-        <h2 className="evr-headline mt-4 max-w-lg text-[clamp(36px,5vw,58px)] tracking-[-0.04em]">
-          The analysis happens in your chat.
-        </h2>
-        <p className="mt-5 max-w-xl text-[16.5px] leading-relaxed text-[#5f564d]">
-          We keep EvolveRun focused: secure Strava sync, clean training data, and a small MCP tool
-          surface that Claude and ChatGPT can use reliably. No bloated dashboard. No fake certainty.
-        </p>
-        <div className="mt-8 grid gap-3">
-          <ValueLine title="Less setup" body="Connect Strava once. Then connect EvolveRun inside Claude.ai or ChatGPT." />
-          <ValueLine title="Better answers" body="The assistant sees your recent activities, period totals, splits, and saved plans." />
-          <ValueLine title="Plan saving" body="When a plan is ready, the assistant asks before saving it to your training calendar." />
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] shadow-xl shadow-[#1a1612]/8">
-        <div className="flex items-center gap-2 border-b border-[#1a1612]/10 px-4 py-3">
-          <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
-          <span className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
-          <span className="h-3 w-3 rounded-full bg-[#28c840]" />
-          <span className="ml-3 text-[12px] text-[#7a7168]">claude.ai · EvolveRun connected</span>
-        </div>
-        <div className="space-y-4 p-5 sm:p-6">
-          <ChatBubble who="You">
-            Am I training polarized or spending too much time in grey zone?
-          </ChatBubble>
-          <ToolCall name="get-period-summary" detail="last 8 weeks · run only" />
-          <ToolCall name="get-recent-activities" detail="25 activities · pace + HR + elevation" />
-          <ChatBubble who="Claude" muted>
-            Your last 8 weeks look more pyramidal than polarized: about 67% easy, 24% moderate,
-            and 9% hard by time. The issue is not intensity volume, it is where the moderate work
-            lands: most of it appears in long-run fade and steady aerobic days.
-          </ChatBubble>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Insight label="Easy" value="67%" tone="good" />
-            <Insight label="Moderate" value="24%" tone="warn" />
-            <Insight label="Hard" value="9%" tone="good" />
-          </div>
-        </div>
       </div>
     </section>
   );
@@ -311,13 +259,26 @@ function ToolCall({ name, detail }: { name: string; detail: string }) {
   );
 }
 
-function Insight({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" }) {
+function Insight({
+  label,
+  value,
+  unit,
+  tone,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  tone: "good" | "warn";
+}) {
   return (
     <div className="rounded-2xl border border-[#1a1612]/10 bg-white/65 p-4">
       <div className="text-[11px] uppercase tracking-[0.16em] text-[#8a7f74]">{label}</div>
-      <div className="mt-2 text-[26px] font-semibold tracking-[-0.04em]">{value}</div>
+      <div className="mt-2 flex items-baseline gap-1">
+        <span className="text-[24px] font-semibold tracking-[-0.04em]">{value}</span>
+        <span className="text-[12px] text-[#8a7f74]">{unit}</span>
+      </div>
       <div className={tone === "good" ? "mt-1 text-[12px] text-emerald-700" : "mt-1 text-[12px] text-[#b85d32]"}>
-        {tone === "good" ? "within range" : "watch zone"}
+        {tone === "good" ? "improving" : "watch zone"}
       </div>
     </div>
   );
@@ -327,18 +288,18 @@ function HowItWorks() {
   const steps = [
     {
       n: "01",
-      t: "Connect Strava",
-      d: "We import your recent activities and keep listening for new uploads through Strava webhooks.",
+      t: "Connect Strava via OAuth",
+      d: "Authorize EvolveRun once. We import your recent activities and keep listening for new uploads.",
     },
     {
       n: "02",
-      t: "Add EvolveRun to your AI",
-      d: "Claude.ai and ChatGPT can connect to the hosted MCP endpoint. No desktop JSON setup for customers.",
+      t: "Add the EvolveRun connector",
+      d: "Add the EvolveRun custom connector to Claude, ChatGPT, or Gemini. No desktop JSON setup.",
     },
     {
       n: "03",
-      t: "Ask, analyze, save",
-      d: "Ask for race prep, grey-zone analysis, long-run debriefs, or a plan. Save plans back to EvolveRun when ready.",
+      t: "Ask about your training",
+      d: "Ask questions about your training data — pace trends, fatigue, weekly load, and race prep.",
     },
   ];
 
@@ -350,7 +311,7 @@ function HowItWorks() {
             How it works
           </div>
           <h2 className="evr-headline mt-4 max-w-xl text-[clamp(36px,5vw,58px)] tracking-[-0.04em]">
-            A data layer, not another training app.
+            Three steps from Strava to answers.
           </h2>
         </div>
         <p className="max-w-md text-[15.5px] leading-relaxed text-[#5f564d]">
@@ -366,40 +327,6 @@ function HowItWorks() {
             <p className="mt-3 text-[14.5px] leading-relaxed text-[#62584f]">{step.d}</p>
           </div>
         ))}
-      </div>
-    </section>
-  );
-}
-
-function PromptGrid() {
-  const prompts = [
-    "What changed in my training over the last 8 weeks?",
-    "Am I polarized, pyramidal, or stuck in grey zone?",
-    "Write a 10-week half marathon plan around my current volume.",
-    "Which recent run should I treat as my fitness benchmark?",
-    "Why did my long run fade after 75 minutes?",
-    "Turn this plan into a Mon-Sun calendar and ask before saving it.",
-  ];
-
-  return (
-    <section id="prompts" className="border-y border-[#1a1612]/10 bg-[#1a1612] px-5 py-24 text-white sm:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="max-w-2xl">
-          <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#f0a17d]">
-            Cookbook
-          </div>
-          <h2 className="evr-headline mt-4 text-[clamp(36px,5vw,58px)] tracking-[-0.04em]">
-            Start with questions that actually move training.
-          </h2>
-        </div>
-        <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {prompts.map((prompt) => (
-            <div key={prompt} className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
-              <div className="text-[12px] text-white/45">Try asking</div>
-              <p className="mt-2 text-[15px] leading-relaxed text-white/88">"{prompt}"</p>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );
@@ -438,7 +365,7 @@ function Pricing() {
           href="/signup"
           className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#1a1612] px-6 text-[14.5px] font-medium text-white transition hover:bg-[#2b251f]"
         >
-          Start free trial
+          Get started
         </Link>
         <p className="mt-4 text-center text-[12px] text-[#8a7f74]">
           Cancel anytime. No extra wearable subscription.
@@ -461,18 +388,30 @@ function Footer() {
             Simple AI endurance coaching from your Strava data. MCP endpoint:{" "}
             <code className="rounded bg-white/60 px-1.5 py-0.5 text-[12px]">{CONNECTOR_URL}</code>
           </p>
+          <Link
+            href="/signup"
+            className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#1a1612] px-5 text-[13.5px] font-medium text-white transition hover:bg-[#2b251f]"
+          >
+            Start free trial
+          </Link>
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] text-[#6b6259]">
-          <Link href="/login" className="hover:text-[#1a1612]">
-            Log in
-          </Link>
           <a href="#how-it-works" className="hover:text-[#1a1612]">
             How it works
           </a>
+          <a href="#integrations" className="hover:text-[#1a1612]">
+            Integrations
+          </a>
+          <a href="#pricing" className="hover:text-[#1a1612]">
+            Pricing
+          </a>
+          <Link href="/login" className="hover:text-[#1a1612]">
+            Login
+          </Link>
           <a href="https://github.com/255065/evovlerun" target="_blank" rel="noreferrer" className="hover:text-[#1a1612]">
             GitHub
           </a>
-          <span>© {new Date().getFullYear()} EvolveRun</span>
+          <span>© 2026 EvolveRun</span>
         </div>
       </div>
     </footer>

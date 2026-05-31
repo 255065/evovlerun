@@ -18,8 +18,8 @@ export default async function TrainingPage() {
   return (
     <div className="space-y-8 pb-16">
       <div>
-        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Training</h1>
-        <p className="mt-1 text-[14px] text-neutral-600">
+        <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Training</h1>
+        <p className="mt-2 text-[15px] text-[#5f564d]">
           The active plan your AI coach saved through the EvolveRun connector.
         </p>
       </div>
@@ -66,19 +66,20 @@ export function EmptyState() {
 function ActivePlan({ plan }: { plan: NonNullable<Awaited<ReturnType<typeof loadCurrentPlan>>> }) {
   const sessions = plan.next_14_days ?? [];
   return (
-    <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-6">
-      <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-6">
+      <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#dc6b3f]">
         Next 14 days
       </div>
       {sessions.length === 0 ? (
-        <p className="mt-4 text-[13.5px] text-neutral-600">
+        <p className="mt-4 text-[13.5px] text-[#6b6259]">
           No sessions in the next 14 days. Ask your AI coach to extend the plan.
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-neutral-200/70 text-neutral-500">
+              <tr className="border-b border-[#1a1612]/10 text-[#8a7f74]">
                 <Th className="w-28">Day</Th>
                 <Th className="w-32">Session</Th>
                 <Th className="w-20">Duration</Th>
@@ -92,33 +93,33 @@ function ActivePlan({ plan }: { plan: NonNullable<Awaited<ReturnType<typeof load
                 return (
                   <tr
                     key={`${s.scheduled_date}-${idx}`}
-                    className="border-b border-neutral-200/50 align-top last:border-0"
+                    className="border-b border-[#1a1612]/8 align-top last:border-0"
                   >
                     <td className="py-3 pr-3">
-                      <span className="block text-[13px] font-medium text-neutral-800">
+                      <span className="block text-[13px] font-medium text-[#1a1612]">
                         {fmtWeekday(s.scheduled_date)}
                       </span>
-                      <span className="font-mono text-[11px] text-neutral-500">
+                      <span className="font-mono text-[11px] text-[#8a7f74]">
                         {fmtDate(s.scheduled_date)}
                       </span>
                     </td>
                     <td className="py-3 pr-3">
                       <span
-                        className={`text-[14px] font-medium ${isRest ? "text-neutral-500" : ""}`}
+                        className={`text-[14px] font-medium ${isRest ? "text-[#8a7f74]" : ""}`}
                       >
                         {fmtSessionType(s.session_type)}
                       </span>
                     </td>
-                    <td className="py-3 pr-3 text-[13px] text-neutral-600">
+                    <td className="py-3 pr-3 text-[13px] text-[#6b6259]">
                       {s.duration_min ? `${s.duration_min} min` : "—"}
                     </td>
-                    <td className="py-3 pr-3 text-[13px] text-neutral-600">
+                    <td className="py-3 pr-3 text-[13px] text-[#6b6259]">
                       {s.distance_m ? `${(s.distance_m / 1000).toFixed(1)} km` : "—"}
                     </td>
-                    <td className="py-3 text-[13px] text-neutral-700">
-                      {s.description ? <span>{s.description}</span> : <span className="text-neutral-400">—</span>}
+                    <td className="py-3 text-[13px] text-[#4b423a]">
+                      {s.description ? <span>{s.description}</span> : <span className="text-[#a89e92]">—</span>}
                       {s.rationale && (
-                        <p className="mt-1 text-[12px] text-neutral-500">{s.rationale}</p>
+                        <p className="mt-1 text-[12px] text-[#8a7f74]">{s.rationale}</p>
                       )}
                     </td>
                   </tr>
@@ -128,6 +129,16 @@ function ActivePlan({ plan }: { plan: NonNullable<Awaited<ReturnType<typeof load
           </table>
         </div>
       )}
+      </div>
+      <p className="px-1 text-[13.5px] text-[#5f564d]">
+        Want to change your training plan?{" "}
+        <Link
+          href="/dashboard/mcp"
+          className="font-medium text-[#dc6b3f] hover:underline"
+        >
+          Ask your AI coach →
+        </Link>
+      </p>
     </div>
   );
 }
@@ -135,7 +146,7 @@ function ActivePlan({ plan }: { plan: NonNullable<Awaited<ReturnType<typeof load
 function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <th
-      className={`pb-2 pr-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.15em] ${className}`}
+      className={`pb-2 pr-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.15em] text-[#8a7f74] ${className}`}
     >
       {children}
     </th>

@@ -60,7 +60,7 @@ export async function createKeyAction(
   formData: FormData,
 ): Promise<CreateKeyState> {
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return { error: "Giv nøglen et navn.", newKey: null };
+  if (!name) return { error: "Give the key a name.", newKey: null };
 
   const token = await getToken();
   const response = await fetch(`${BACKEND_URL}/mcp-keys`, {
@@ -69,7 +69,7 @@ export async function createKeyAction(
     body: JSON.stringify({ name }),
   });
   if (!response.ok) {
-    return { error: `Kunne ikke oprette nøgle (${response.status})`, newKey: null };
+    return { error: `Could not create key (${response.status})`, newKey: null };
   }
   const data = (await response.json()) as CreateKeyResult;
   revalidatePath("/dashboard/mcp");

@@ -5,7 +5,6 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { signupAction, type AuthState } from "../actions";
 
 const initialState: AuthState = { error: null };
@@ -14,16 +13,18 @@ export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 dark:bg-neutral-950">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Opret din konto</CardTitle>
-          <CardDescription>Start din adaptive trænings-rejse.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={formAction} className="space-y-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-4 text-[#1a1612]">
+      <div className="w-full max-w-md">
+        <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-[15px] font-semibold">
+          <Brandmark />
+          EvolveRun
+        </Link>
+        <div className="rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] p-8 shadow-xl shadow-[#1a1612]/8">
+          <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Create your account</h1>
+          <p className="mt-2 text-[14.5px] text-[#5f564d]">Start your adaptive training journey.</p>
+          <form action={formAction} className="mt-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Fulde navn</Label>
+              <Label htmlFor="fullName">Full name</Label>
               <Input id="fullName" name="fullName" type="text" required autoComplete="name" />
             </div>
             <div className="space-y-2">
@@ -31,7 +32,7 @@ export default function SignupPage() {
               <Input id="email" name="email" type="email" required autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password (min. 8 tegn)</Label>
+              <Label htmlFor="password">Password (min. 8 characters)</Label>
               <Input
                 id="password"
                 name="password"
@@ -46,18 +47,38 @@ export default function SignupPage() {
                 {state.error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? "Opretter..." : "Opret konto"}
+            <Button
+              type="submit"
+              className="w-full bg-[#1a1612] text-white hover:bg-[#2b251f]"
+              disabled={pending}
+            >
+              {pending ? "Creating..." : "Create account"}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
-            Har du allerede en konto?{" "}
-            <Link href="/login" className="font-medium underline">
-              Log ind
+          <p className="mt-5 text-center text-[13.5px] text-[#6b6259]">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-[#dc6b3f] hover:underline">
+              Log in
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function Brandmark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+      <path d="M3 5 H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M3 12 Q9 8 15 12 T21 12"
+        stroke="#dc6b3f"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M3 19 H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }

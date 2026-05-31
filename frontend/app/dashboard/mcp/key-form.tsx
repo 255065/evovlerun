@@ -31,15 +31,15 @@ function GenerateForm({
   return (
     <form action={formAction} className="space-y-3">
       <div className="space-y-2">
-        <Label htmlFor="name">Nøgle-navn</Label>
+        <Label htmlFor="name">Key name</Label>
         <div className="flex gap-2">
           <Input id="name" name="name" placeholder="MacBook Claude Desktop" required maxLength={80} />
           <Button type="submit" disabled={pending}>
-            {pending ? "Genererer…" : "Generér nøgle"}
+            {pending ? "Generating…" : "Generate key"}
           </Button>
         </div>
-        <p className="text-xs text-neutral-500">
-          Giv nøglen et navn så du kan kende den senere (fx hvilken enhed eller AI-app der bruger den).
+        <p className="text-xs text-[#7a7168]">
+          Give the key a name so you can recognize it later (e.g. which device or AI app uses it).
         </p>
       </div>
       {error && (
@@ -68,10 +68,10 @@ function KeyRevealCard({ apiKey }: { apiKey: string }) {
         <Sparkles className="mt-0.5 h-4 w-4 text-emerald-700 dark:text-emerald-300" />
         <div className="flex-1 space-y-2">
           <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
-            Nøgle oprettet — vi viser den ikke igen
+            Key created — we won&apos;t show it again
           </p>
           <p className="text-xs text-emerald-800 dark:text-emerald-300">
-            Hvis du vælger auto-install nedenfor er nøglen allerede indlejret. Ellers kopiér den manuelt.
+            If you choose auto-install below, the key is already embedded. Otherwise copy it manually.
           </p>
           <div className="flex items-center gap-2 pt-1">
             <code className="block flex-1 truncate rounded bg-white px-3 py-2 font-mono text-xs dark:bg-neutral-900">
@@ -95,7 +95,7 @@ function InstallTabs({ result }: { result: NonNullable<CreateKeyState["newKey"]>
           Auto-install (macOS)
         </TabButton>
         <TabButton active={tab === "manual"} onClick={() => setTab("manual")} icon={<FileJson className="h-4 w-4" />}>
-          Manuel JSON
+          Manual JSON
         </TabButton>
         <TabButton active={tab === "chatgpt"} onClick={() => setTab("chatgpt")} icon={<Sparkles className="h-4 w-4" />}>
           ChatGPT
@@ -143,8 +143,8 @@ function AutoInstallPane({ result }: { result: NonNullable<CreateKeyState["newKe
     <div className="space-y-4">
       <div className="space-y-2 text-sm">
         <p>
-          <strong>Kør én kommando i Terminal.</strong> Scriptet patcher Claude Desktop&apos;s config-fil og genstarter
-          appen. Ingen JSON-editing.
+          <strong>Run one command in Terminal.</strong> The script patches Claude Desktop&apos;s config file and restarts
+          the app. No JSON editing.
         </p>
       </div>
 
@@ -153,24 +153,24 @@ function AutoInstallPane({ result }: { result: NonNullable<CreateKeyState["newKe
           filename={filename}
           content={result.install.macos_install_script}
           mimeType="application/x-sh"
-          label="Download install-script"
+          label="Download install script"
         />
-        <span className="text-xs text-neutral-500">…eller copy-paste hele scriptet nedenfor i Terminal.</span>
+        <span className="text-xs text-[#7a7168]">…or copy-paste the whole script below into Terminal.</span>
       </div>
 
       <CodeBlock content={result.install.macos_install_script} language="bash" />
 
-      <div className="rounded-md bg-neutral-50 p-3 text-xs text-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-400">
-        <p className="font-medium text-neutral-700 dark:text-neutral-300">Sådan virker det:</p>
+      <div className="rounded-xl bg-[#1a1612]/5 p-3 text-xs text-[#6b6259]">
+        <p className="font-medium text-[#4b423a]">How it works:</p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
           <li>
-            Verificerer at <code className="font-mono text-[11px]">{result.install.mcp_server_path}</code> findes
+            Verifies that <code className="font-mono text-[11px]">{result.install.mcp_server_path}</code> exists
           </li>
           <li>
-            Tilføjer <code className="font-mono text-[11px]">evolverun</code> til Claude&apos;s MCP-config (uden at røre
-            andre servere)
+            Adds <code className="font-mono text-[11px]">evolverun</code> to Claude&apos;s MCP config (without touching
+            other servers)
           </li>
-          <li>Genstarter Claude Desktop så den picker den nye config op</li>
+          <li>Restarts Claude Desktop so it picks up the new config</li>
         </ol>
       </div>
     </div>
@@ -182,16 +182,16 @@ function ManualPane({ result }: { result: NonNullable<CreateKeyState["newKey"]> 
     <div className="space-y-4 text-sm">
       <ol className="list-decimal space-y-2 pl-4">
         <li>
-          Åbn{" "}
-          <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-xs dark:bg-neutral-800">
+          Open{" "}
+          <code className="rounded bg-[#1a1612]/8 px-1 py-0.5 font-mono text-xs">
             {result.install.claude_config_file_path}
           </code>
         </li>
         <li>
-          Indsæt indholdet nedenfor. Hvis filen allerede har <code className="font-mono text-xs">mcpServers</code>, så
-          merge bare <code className="font-mono text-xs">evolverun</code> ind.
+          Paste the content below. If the file already has <code className="font-mono text-xs">mcpServers</code>, just
+          merge <code className="font-mono text-xs">evolverun</code> in.
         </li>
-        <li>Genstart Claude Desktop (Cmd+Q og åbn igen).</li>
+        <li>Restart Claude Desktop (Cmd+Q and open again).</li>
       </ol>
       <CodeBlock content={result.install.claude_desktop_config_snippet} language="json" />
     </div>
@@ -201,23 +201,23 @@ function ManualPane({ result }: { result: NonNullable<CreateKeyState["newKey"]> 
 function ChatGPTPane({ apiKey }: { apiKey: string }) {
   return (
     <div className="space-y-3 text-sm">
-      <p>ChatGPT understøtter ikke MCP direkte endnu. To muligheder:</p>
+      <p>ChatGPT doesn&apos;t support MCP directly yet. Two options:</p>
       <ol className="list-decimal space-y-2 pl-4">
         <li>
-          <strong>Custom GPT med Actions</strong> — vi udstiller en HTTP-version af din MCP-server på et hosted endpoint
-          (kommer snart). Indtil da: brug Claude Desktop.
+          <strong>Custom GPT with Actions</strong> — we expose an HTTP version of your MCP server on a hosted endpoint
+          (coming soon). Until then: use Claude Desktop.
         </li>
         <li>
-          <strong>Kald API&apos;et direkte</strong> — bygger du dit eget integration, så send din nøgle som{" "}
-          <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-xs dark:bg-neutral-800">
+          <strong>Call the API directly</strong> — if you build your own integration, send your key as{" "}
+          <code className="rounded bg-[#1a1612]/8 px-1 py-0.5 font-mono text-xs">
             Authorization: Bearer {apiKey.slice(0, 12)}…
           </code>{" "}
-          mod backend&apos;ens REST-endpoints.
+          against the backend&apos;s REST endpoints.
         </li>
       </ol>
-      <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-        <strong>Heads-up:</strong> ChatGPT-connector flowet kommer i næste sprint (HTTP MCP + Anthropic connector
-        marketplace listing). Indtil da er Claude Desktop den primære chat-flade.
+      <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
+        <strong>Heads-up:</strong> the ChatGPT connector flow is coming next sprint (HTTP MCP + Anthropic connector
+        marketplace listing). Until then, Claude Desktop is the primary chat surface.
       </div>
     </div>
   );
@@ -225,19 +225,19 @@ function ChatGPTPane({ apiKey }: { apiKey: string }) {
 
 function ExamplesCard() {
   const samples = [
-    "Hvad var min sidste lange løbetur og hvad var min cardiac drift?",
-    "Sammenlign min easy pace de sidste 3 måneder. Bliver jeg mere effektiv?",
-    "Hvad er min nuværende limiter, og hvad anbefaler du jeg fokuserer på?",
-    "Hvilken session har jeg planlagt i morgen, og hvorfor er den prescriberet?",
-    "Vis mig min CTL-trend over 12 uger.",
+    "What was my last long run and what was my cardiac drift?",
+    "Compare my easy pace over the last 3 months. Am I getting more efficient?",
+    "What's my current limiter, and what do you recommend I focus on?",
+    "What session do I have planned tomorrow, and why is it prescribed?",
+    "Show me my CTL trend over 12 weeks.",
   ];
   return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
-      <p className="text-sm font-medium">Prøv at spørge Claude:</p>
-      <ul className="mt-2 space-y-1 text-sm text-neutral-700 dark:text-neutral-300">
+    <div className="rounded-xl border border-[#1a1612]/10 bg-[#1a1612]/5 p-4">
+      <p className="text-sm font-medium">Try asking Claude:</p>
+      <ul className="mt-2 space-y-1 text-sm text-[#4b423a]">
         {samples.map((s, i) => (
           <li key={i} className="flex gap-2">
-            <span className="text-neutral-400">›</span>
+            <span className="text-[#a89e92]">›</span>
             <span className="italic">{s}</span>
           </li>
         ))}
@@ -275,7 +275,7 @@ function CopyButton({ text }: { text: string }) {
       }}
     >
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-      <span className="ml-1.5">{copied ? "Kopieret" : "Kopiér"}</span>
+      <span className="ml-1.5">{copied ? "Copied" : "Copy"}</span>
     </Button>
   );
 }

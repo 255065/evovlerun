@@ -24,10 +24,10 @@ export function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={copy}
-      className={`rounded-md px-3 py-1.5 text-[12.5px] font-medium transition ${
+      className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition ${
         copied
           ? "bg-emerald-100 text-emerald-800"
-          : "bg-neutral-900 text-white hover:bg-neutral-800"
+          : "bg-[#1a1612] text-white hover:bg-[#2b251f]"
       }`}
     >
       {copied ? "Copied" : "Copy"}

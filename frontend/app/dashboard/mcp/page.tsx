@@ -25,7 +25,7 @@ const SAMPLE_PROMPTS = [
 
 function StepNumber({ n }: { n: number }) {
   return (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white">
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#dc6b3f] text-xs font-semibold text-white">
       {n}
     </span>
   );
@@ -39,9 +39,9 @@ export default async function MCPPage() {
     <div className="space-y-10">
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Connect Claude to EvolveRun</h1>
-        <p className="mt-1 text-[15px] text-neutral-600">Three steps. Takes under a minute.</p>
-        <p className="mt-3 text-sm text-neutral-500">
+        <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Connect Claude to EvolveRun</h1>
+        <p className="mt-2 text-[15px] text-[#5f564d]">Three steps. Takes under a minute.</p>
+        <p className="mt-3 text-sm text-[#7a7168]">
           Set up EvolveRun in Claude in your browser first, then use it anywhere you use Claude. This
           setup works best on a desktop browser.
         </p>
@@ -60,12 +60,12 @@ export default async function MCPPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <label className="text-xs font-medium text-neutral-500">Claude MCP URL</label>
-            <div className="flex items-center gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-2">
-              <code className="flex-1 truncate font-mono text-sm text-neutral-800">{MCP_URL}</code>
+            <label className="text-xs font-medium text-[#7a7168]">Claude MCP URL</label>
+            <div className="flex items-center gap-2 rounded-xl border border-[#1a1612]/12 bg-white/60 p-2">
+              <code className="flex-1 truncate font-mono text-sm text-[#1a1612]">{MCP_URL}</code>
               <CopyButton text={MCP_URL} />
             </div>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-[#7a7168]">
               Same URL for every user — Claude signs you into your own EvolveRun account via OAuth in
               the next step.
             </p>
@@ -114,9 +114,9 @@ export default async function MCPPage() {
             {SAMPLE_PROMPTS.map((prompt) => (
               <li
                 key={prompt}
-                className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 bg-white px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-xl border border-[#1a1612]/10 bg-white/60 px-3 py-2"
               >
-                <span className="truncate text-sm text-neutral-800">{prompt}</span>
+                <span className="truncate text-sm text-[#4b423a]">{prompt}</span>
                 <CopyButton text={prompt} />
               </li>
             ))}
@@ -126,17 +126,17 @@ export default async function MCPPage() {
 
       {/* ── Divider ───────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 pt-2">
-        <div className="h-px flex-1 bg-neutral-200" />
-        <span className="text-xs uppercase tracking-wider text-neutral-400">
+        <div className="h-px flex-1 bg-[#1a1612]/12" />
+        <span className="text-xs uppercase tracking-wider text-[#8a7f74]">
           Other clients & API keys
         </span>
-        <div className="h-px flex-1 bg-neutral-200" />
+        <div className="h-px flex-1 bg-[#1a1612]/12" />
       </div>
 
       {/* ── Advanced: API keys (ChatGPT / Gemini / custom) ────────────── */}
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT, Gemini, or a custom client?</h2>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-1 text-sm text-[#7a7168]">
           Claude uses OAuth automatically. For other assistants, generate a personal API key below and
           paste it into the install script — one key per device.
         </p>
@@ -167,16 +167,16 @@ export default async function MCPPage() {
         </CardHeader>
         <CardContent>
           {keys.length === 0 ? (
-            <p className="text-sm text-neutral-500">No keys yet — create your first one above.</p>
+            <p className="text-sm text-[#7a7168]">No keys yet — create your first one above.</p>
           ) : (
-            <ul className="divide-y divide-neutral-200">
+            <ul className="divide-y divide-[#1a1612]/10">
               {keys.map((k) => {
                 const isRevoked = k.revoked_at !== null;
                 return (
                   <li key={k.id} className="flex items-center justify-between py-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{k.name}</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="text-xs text-[#7a7168]">
                         <code className="font-mono">{k.key_prefix}…</code>
                         <span className="ml-2">
                           created {new Date(k.created_at).toLocaleDateString("en-GB")}

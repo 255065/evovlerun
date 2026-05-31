@@ -39,7 +39,7 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   const fullName = String(formData.get("fullName") ?? "");
 
   if (password.length < 8) {
-    return { error: "Password skal være mindst 8 tegn." };
+    return { error: "Password must be at least 8 characters." };
   }
 
   const supabase = await createClient();

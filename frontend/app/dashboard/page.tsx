@@ -49,8 +49,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-12 pb-16">
       <div>
-        <h1 className="text-[40px] font-semibold tracking-[-0.025em]">Dashboard</h1>
-        <p className="mt-1 text-[14px] text-neutral-600">
+        <h1 className="evr-headline text-[clamp(36px,5vw,52px)] tracking-[-0.03em]">Dashboard</h1>
+        <p className="mt-2 text-[15px] text-[#5f564d]">
           Welcome back, {fullName}.
         </p>
       </div>
@@ -108,15 +108,15 @@ export default async function DashboardPage() {
         eyebrow="Latest activity"
         right={
           strava?.connected && (
-            <span className="text-[12px] text-neutral-500">
+            <span className="text-[12px] text-[#7a7168]">
               Synced {fmtRelative(strava.last_sync_at)}
             </span>
           )
         }
       >
         {latest === null ? (
-          <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
-            <p className="text-[13.5px] text-neutral-600">
+          <div className="rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
+            <p className="text-[13.5px] text-[#6b6259]">
               We&apos;ll show your latest activity once Strava has finished its first sync.
             </p>
           </div>
@@ -127,9 +127,9 @@ export default async function DashboardPage() {
 
       {/* ─── This week ───────────────────────────────────────── */}
       <Section eyebrow="This week">
-        <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+        <div className="rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
           {week.activities === 0 ? (
-            <p className="text-[13.5px] text-neutral-600">No activities in the last 7 days.</p>
+            <p className="text-[13.5px] text-[#6b6259]">No activities in the last 7 days.</p>
           ) : (
             <div className="grid grid-cols-3 gap-x-8 gap-y-2">
               <LoadStat label="Activities" value={String(week.activities)} />
@@ -140,12 +140,12 @@ export default async function DashboardPage() {
         </div>
 
         {today && (
-          <div className="mt-5 rounded-xl border border-neutral-200/70 bg-white/60 p-4">
-            <div className="font-mono text-[11px] uppercase tracking-widest text-neutral-500">
+          <div className="mt-5 rounded-xl border border-[#dc6b3f]/25 bg-[#dc6b3f]/8 p-4">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-[#9e4728]">
               Today
             </div>
             <div className="mt-1 text-[15px] font-medium">{capitalize(today.session_type)}</div>
-            <div className="text-[13px] text-neutral-600">
+            <div className="text-[13px] text-[#7a4225]">
               {planRowSub(today)}
             </div>
           </div>
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
         eyebrow="Quick prompts"
         right={<Link href="/dashboard/mcp" className="text-[13px] text-[color:var(--evr-accent)] hover:underline">Connector setup</Link>}
       >
-        <p className="mb-4 text-[13px] text-neutral-600">
+        <p className="mb-4 text-[13px] text-[#6b6259]">
           Copy any of these into Claude.ai, ChatGPT, or Gemini once the EvolveRun connector is attached.
         </p>
         <div className="space-y-2">
@@ -216,7 +216,7 @@ function Section({
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+        <span className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#dc6b3f]">
           {eyebrow}
         </span>
         {right}
@@ -240,7 +240,7 @@ function SourceRow({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+    <div className="flex items-center gap-4 rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white"
         style={{ background: color }}
@@ -249,21 +249,21 @@ function SourceRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-semibold tracking-[-0.005em]">{name}</div>
-        <div className="truncate text-[12.5px] text-neutral-600">{subtitle}</div>
+        <div className="truncate text-[12.5px] text-[#6b6259]">{subtitle}</div>
       </div>
       {connected ? (
         <span className="rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
           Synced
         </span>
       ) : (
-        <span className="rounded-full bg-neutral-200 px-2.5 py-[3px] text-[11px] font-medium text-neutral-600">
+        <span className="rounded-full bg-[#1a1612]/8 px-2.5 py-[3px] text-[11px] font-medium text-[#7a7168]">
           Not connected
         </span>
       )}
       {connected && (
         <form action={disconnectProviderAction}>
           <input type="hidden" name="provider" value="strava" />
-          <button type="submit" className="text-[12.5px] text-neutral-500 hover:text-neutral-950">
+          <button type="submit" className="text-[12.5px] text-[#7a7168] hover:text-[#1a1612]">
             Disconnect
           </button>
         </form>
@@ -274,7 +274,7 @@ function SourceRow({
 
 function CoachRow({ name, subtitle, color }: { name: string; subtitle: string; color: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+    <div className="flex items-center gap-4 rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
       <div
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
         style={{ background: color + "22", color }}
@@ -285,7 +285,7 @@ function CoachRow({ name, subtitle, color }: { name: string; subtitle: string; c
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-[15px] font-semibold tracking-[-0.005em]">{name}</div>
-        <div className="truncate text-[12.5px] text-neutral-600">{subtitle}</div>
+        <div className="truncate text-[12.5px] text-[#6b6259]">{subtitle}</div>
       </div>
       <Link
         href="/dashboard/mcp"
@@ -300,7 +300,7 @@ function CoachRow({ name, subtitle, color }: { name: string; subtitle: string; c
 function LoadStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-neutral-500">{label}</div>
+      <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-[#8a7f74]">{label}</div>
       <div className="mt-1 text-[28px] font-semibold tracking-[-0.02em] leading-none">{value}</div>
     </div>
   );
@@ -313,8 +313,8 @@ function LoadStat({ label, value }: { label: string; value: string }) {
  */
 function PromptRow({ text }: { text: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-neutral-200/70 bg-white/70 px-4 py-3">
-      <p className="flex-1 text-[14px] text-neutral-800">{text}</p>
+    <div className="flex items-center gap-4 rounded-xl border border-[#1a1612]/10 bg-[#fbf8f1] px-4 py-3">
+      <p className="flex-1 text-[14px] text-[#4b423a]">{text}</p>
       <CopyButton text={text} />
     </div>
   );

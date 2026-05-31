@@ -6,34 +6,53 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { loginAction, type AuthState } from "../actions";
 
 const initialState: AuthState = { error: null };
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 dark:bg-neutral-950">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Velkommen tilbage</CardTitle>
-          <CardDescription>Log ind for at se din coach.</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-4 text-[#1a1612]">
+      <div className="w-full max-w-md">
+        <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-[15px] font-semibold">
+          <Brandmark />
+          EvolveRun
+        </Link>
+        <div className="rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] p-8 shadow-xl shadow-[#1a1612]/8">
+          <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Welcome back</h1>
+          <p className="mt-2 text-[14.5px] text-[#5f564d]">Log in to see your coach.</p>
           {/* useSearchParams must live inside Suspense so Next.js can statically
               prerender the rest of the form without bailing out. */}
-          <Suspense fallback={<LoginForm fallbackRedirect="" />}>
-            <SearchParamLoginForm />
-          </Suspense>
-          <p className="mt-4 text-center text-sm text-neutral-600 dark:text-neutral-400">
-            Ingen konto?{" "}
-            <Link href="/signup" className="font-medium underline">
-              Opret en
+          <div className="mt-6">
+            <Suspense fallback={<LoginForm fallbackRedirect="" />}>
+              <SearchParamLoginForm />
+            </Suspense>
+          </div>
+          <p className="mt-5 text-center text-[13.5px] text-[#6b6259]">
+            No account?{" "}
+            <Link href="/signup" className="font-medium text-[#dc6b3f] hover:underline">
+              Create one
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function Brandmark() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+      <path d="M3 5 H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M3 12 Q9 8 15 12 T21 12"
+        stroke="#dc6b3f"
+        strokeWidth="2"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M3 19 H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -60,8 +79,12 @@ function LoginForm({ fallbackRedirect }: { fallbackRedirect: string }) {
           {state.error}
         </p>
       )}
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Logger ind..." : "Log ind"}
+      <Button
+        type="submit"
+        className="w-full bg-[#1a1612] text-white hover:bg-[#2b251f]"
+        disabled={pending}
+      >
+        {pending ? "Logging in..." : "Log in"}
       </Button>
     </form>
   );

@@ -25,7 +25,7 @@ const PROVIDERS: Provider[] = [
   {
     id: "strava",
     name: "Strava",
-    desc: "Aktiviteter, splits, pace, HR, power, elevation. Auto-syncer fra Garmin, Apple Watch, Polar, COROS, Suunto, Wahoo og 9 mere.",
+    desc: "Activities, splits, pace, HR, power, elevation. Auto-syncs from Garmin, Apple Watch, Polar, COROS, Suunto, Wahoo and 9 more.",
     enabled: true,
     authMode: "oauth",
   },
@@ -70,18 +70,18 @@ export default async function ConnectionsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[36px] font-semibold tracking-[-0.025em]">Connections</h1>
-        <p className="mt-1 text-[14px] text-neutral-600">
+        <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Connections</h1>
+        <p className="mt-2 text-[15px] text-[#5f564d]">
           Connect your data sources. Tokens are encrypted with Fernet before they&apos;re stored.
         </p>
       </div>
 
       {banner && (
         <div
-          className={`rounded-md border px-4 py-3 text-sm ${
+          className={`rounded-xl border px-4 py-3 text-sm ${
             banner.tone === "ok"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
-              : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-amber-200 bg-amber-50 text-amber-900"
           }`}
         >
           {banner.message}
@@ -102,18 +102,18 @@ export default async function ConnectionsPage({
                     <CardDescription className="mt-1">{p.desc}</CardDescription>
                   </div>
                   {isConnected && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">
-                      forbundet
+                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      Connected
                     </span>
                   )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {p.warning && <p className="text-xs text-amber-700 dark:text-amber-300">{p.warning}</p>}
+                {p.warning && <p className="text-xs text-amber-700">{p.warning}</p>}
 
                 {!p.enabled ? (
                   <Button variant="outline" disabled>
-                    Kommer snart
+                    Coming soon
                   </Button>
                 ) : isConnected ? (
                   <div className="flex flex-wrap gap-2">
@@ -121,7 +121,7 @@ export default async function ConnectionsPage({
                       <input type="hidden" name="provider" value={p.id} />
                       <input type="hidden" name="days" value="30" />
                       <Button type="submit" variant="outline" size="sm">
-                        Sync sidste 30 dage
+                        Sync last 30 days
                       </Button>
                     </form>
                     <form action={disconnectProviderAction}>
@@ -157,30 +157,30 @@ function buildBanner(
   if (!provider || !status) return null;
 
   if (status === "connected") {
-    return { tone: "ok", message: `${capitalize(provider)} forbundet og initial sync kørt 🎉` };
+    return { tone: "ok", message: `${capitalize(provider)} connected — initial sync complete 🎉` };
   }
   if (status === "connected_no_sync") {
     return {
       tone: "warn",
-      message: `${capitalize(provider)} forbundet, men første sync fejlede. Prøv "Sync sidste 30 dage" manuelt.`,
+      message: `${capitalize(provider)} connected, but the first sync failed. Try "Sync last 30 days" manually.`,
     };
   }
   if (status === "synced") {
-    return { tone: "ok", message: `Sync færdig for ${capitalize(provider)}.` };
+    return { tone: "ok", message: `Sync complete for ${capitalize(provider)}.` };
   }
   if (status === "sync_started") {
     return {
       tone: "ok",
-      message: `Backfill startet for ${capitalize(provider)} — det kører i baggrunden og tager typisk 3–5 minutter. Genindlæs siden om et par minutter for at se det opdaterede dato-interval.`,
+      message: `Backfill started for ${capitalize(provider)} — it runs in the background and typically takes 3–5 minutes. Reload the page in a couple of minutes to see the updated date range.`,
     };
   }
   if (status === "disconnected") {
-    return { tone: "ok", message: `${capitalize(provider)} frakoblet.` };
+    return { tone: "ok", message: `${capitalize(provider)} disconnected.` };
   }
   if (status.startsWith("denied")) {
-    return { tone: "warn", message: `Du afslog adgang på ${capitalize(provider)}.` };
+    return { tone: "warn", message: `You declined access on ${capitalize(provider)}.` };
   }
-  return { tone: "warn", message: `Status fra ${capitalize(provider)}: ${status}` };
+  return { tone: "warn", message: `Status from ${capitalize(provider)}: ${status}` };
 }
 
 function capitalize(s: string): string {

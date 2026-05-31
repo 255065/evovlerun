@@ -15,16 +15,18 @@ export function Brand({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-neutral-950 ${className}`}
+      className={`inline-flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-[#1a1612] ${className}`}
     >
-      <svg viewBox="0 0 24 16" className="h-3.5 w-5" fill="none" aria-hidden>
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
+        <path d="M3 5 H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         <path
-          d="M1 8 H6 L8 3 L11 13 L14 6 L16 9 H23"
-          stroke="currentColor"
-          strokeWidth="1.6"
+          d="M3 12 Q9 8 15 12 T21 12"
+          stroke="#dc6b3f"
+          strokeWidth="2"
           strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="none"
         />
+        <path d="M3 19 H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
       </svg>
       EvolveRun
     </Link>
