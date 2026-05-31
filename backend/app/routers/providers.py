@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
@@ -22,7 +22,15 @@ from app.services.providers import garmin as _garmin  # noqa: F401  pylint: disa
 from app.config import Settings, get_settings
 from app.core.crypto import decrypt, encrypt
 from app.core.security import CurrentUser, get_current_user
-from app.services.connections import load_tokens, mark_status, upsert_tokens
+from app.core.supabase import get_supabase_admin
+from app.services.connections import (
+    find_user_by_provider_id,
+    get_last_sync_at,
+    load_tokens,
+    mark_status,
+    mark_synced,
+    upsert_tokens,
+)
 from app.services.garmin_sync import sync_full as garmin_sync_full
 from app.services.oauth_state import verify_state
 from app.services.providers import get_provider, list_providers
@@ -46,6 +54,7 @@ class ConnectionStatus(BaseModel):
     provider_user_id: str | None = None
     expires_at: datetime | None = None
     scope: str | None = None
+    last_sync_at: datetime | None = None
 
 
 class CredentialLoginBody(BaseModel):
@@ -145,6 +154,7 @@ async def callback(
         written = upsert_activities(user_id=user_id, activities=activities)
         metrics = await provider.fetch_daily_metrics(tokens, since=since.date())
         m_written = upsert_daily_metrics(user_id=user_id, metrics=metrics)
+        mark_synced(user_id=user_id, provider=provider_slug)
         log.info(
             "Initial sync for %s/%s: %d activities, %d daily metrics",
             user_id, provider_slug, written, m_written,
@@ -172,6 +182,7 @@ def connection_status(
         provider_user_id=tokens.provider_user_id,
         expires_at=tokens.expires_at,
         scope=tokens.scope,
+        last_sync_at=get_last_sync_at(user_id=user.id, provider=provider_slug),
     )
 
 
@@ -226,6 +237,7 @@ async def manual_sync(
         metrics = await provider.fetch_daily_metrics(tokens, since=since.date())
         m_written = upsert_daily_metrics(user_id=user.id, metrics=metrics)
 
+        mark_synced(user_id=user.id, provider=provider_slug)
         return {"provider": provider_slug, "activities": written, "daily_metrics": m_written}
     except ProviderAuthError as exc:
         mark_status(user_id=user.id, provider=provider_slug, status="expired")
@@ -345,14 +357,66 @@ def strava_webhook_verify(
     return {"hub.challenge": challenge}
 
 
+async def _ingest_strava_activity(*, user_id: str, activity_id: str) -> None:
+    """Background worker: fetch one Strava activity and upsert it.
+
+    Runs after the webhook has already acked, so it's allowed to take its
+    time (token refresh + API call). Failures are logged, not raised — a
+    missed push is recoverable via the manual "Sync now" button.
+    """
+    try:
+        tokens = load_tokens(user_id=user_id, provider="strava")
+        if not tokens:
+            log.warning("Webhook ingest: no active Strava connection for %s", user_id)
+            return
+        provider = get_provider("strava")
+        tokens = await provider.refresh(tokens)
+        upsert_tokens(user_id=user_id, provider="strava", tokens=tokens)
+
+        activity = await provider.fetch_activity_by_id(tokens, activity_id)
+        upsert_activities(user_id=user_id, activities=[activity])
+        mark_synced(user_id=user_id, provider="strava")
+        log.info("Webhook ingest: synced Strava activity %s for %s", activity_id, user_id)
+    except ProviderAuthError:
+        mark_status(user_id=user_id, provider="strava", status="expired")
+        log.warning("Webhook ingest: Strava auth expired for %s", user_id)
+    except ProviderError as exc:
+        log.warning("Webhook ingest failed for %s/%s: %s", user_id, activity_id, exc)
+
+
 @router.post("/strava/webhook", status_code=200)
-async def strava_webhook_event(request: Request) -> dict[str, str]:
+async def strava_webhook_event(
+    request: Request, background_tasks: BackgroundTasks
+) -> dict[str, str]:
     """Strava push for create/update/delete events.
 
-    We acknowledge fast (must respond within 2s). Real sync happens in the
-    background — TODO when we wire a job queue.
+    Strava requires a response within 2s, so we resolve the user, schedule a
+    background fetch of the single activity, and ack immediately.
     """
     payload = await request.json()
     log.info("Strava webhook event: %s", payload)
-    # TODO: enqueue background job to fetch this single activity by id
+
+    if payload.get("object_type") != "activity":
+        return {"status": "ignored"}  # athlete (deauth) events — nothing to sync
+
+    aspect = payload.get("aspect_type")
+    owner_id = payload.get("owner_id")
+    activity_id = payload.get("object_id")
+    if not owner_id or not activity_id:
+        return {"status": "ignored"}
+
+    user_id = find_user_by_provider_id(provider="strava", provider_user_id=str(owner_id))
+    if not user_id:
+        log.info("Strava webhook for unknown athlete %s — ignoring", owner_id)
+        return {"status": "ignored"}
+
+    if aspect in ("create", "update"):
+        background_tasks.add_task(
+            _ingest_strava_activity, user_id=user_id, activity_id=str(activity_id)
+        )
+    elif aspect == "delete":
+        get_supabase_admin().table("workouts").delete().eq("user_id", user_id).eq(
+            "source", "strava"
+        ).eq("source_id", str(activity_id)).execute()
+
     return {"status": "received"}

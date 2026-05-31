@@ -70,3 +70,49 @@ def mark_status(*, user_id: str, provider: str, status: str) -> None:
     client.table("oauth_connections").update(
         {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}
     ).eq("user_id", user_id).eq("provider", provider).execute()
+
+
+def mark_synced(*, user_id: str, provider: str) -> None:
+    """Stamp last_sync_at = now after a successful activity sync."""
+    now = datetime.now(timezone.utc).isoformat()
+    client = get_supabase_admin()
+    client.table("oauth_connections").update(
+        {"last_sync_at": now, "updated_at": now}
+    ).eq("user_id", user_id).eq("provider", provider).execute()
+
+
+def get_last_sync_at(*, user_id: str, provider: str) -> datetime | None:
+    """Read the connection's last successful activity-sync time, if any."""
+    client = get_supabase_admin()
+    result = (
+        client.table("oauth_connections")
+        .select("last_sync_at")
+        .eq("user_id", user_id)
+        .eq("provider", provider)
+        .eq("status", "active")
+        .maybe_single()
+        .execute()
+    )
+    row = result.data if result else None
+    if not row or not row.get("last_sync_at"):
+        return None
+    return datetime.fromisoformat(row["last_sync_at"].replace("Z", "+00:00"))
+
+
+def find_user_by_provider_id(*, provider: str, provider_user_id: str) -> str | None:
+    """Reverse-lookup the EvolveRun user_id for a provider athlete id.
+
+    Used by webhooks, where the push only carries the provider's own id.
+    """
+    client = get_supabase_admin()
+    result = (
+        client.table("oauth_connections")
+        .select("user_id")
+        .eq("provider", provider)
+        .eq("provider_user_id", str(provider_user_id))
+        .eq("status", "active")
+        .maybe_single()
+        .execute()
+    )
+    row = result.data if result else None
+    return row.get("user_id") if row else None

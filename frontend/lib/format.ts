@@ -69,6 +69,20 @@ export function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+/** Coarse "x ago" label for sync timestamps. Null → "never". */
+export function fmtRelative(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return fmtDate(iso);
+}
+
 export function acwrZone(acwr: number | null | undefined): {
   label: string;
   tone: "success" | "warn" | "danger" | "info";

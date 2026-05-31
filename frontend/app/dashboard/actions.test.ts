@@ -44,25 +44,50 @@ describe("loadActivitySummary", () => {
     expect(await loadActivitySummary()).toBeNull();
   });
 
-  it("maps the latest row and computes week totals", async () => {
+  it("maps the latest row (lifting Strava fields from raw_payload) and computes week totals", async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: "u1" } } });
-    const latest = {
+    const latestRow = {
       started_at: "2026-05-30T06:00:00Z",
       sport: "run",
       distance_m: 10000,
       duration_seconds: 3000,
       avg_pace_s_per_km: 300,
+      elevation_gain_m: 92,
+      notes: "Afternoon Run",
+      raw_payload: {
+        name: "Afternoon Run",
+        map: { summary_polyline: "abc123" },
+        kudos_count: 2,
+        achievement_count: 3,
+        device_name: "Garmin Instinct 2S Solar",
+        location_city: "Ballerup",
+        location_country: "Denmark",
+      },
     };
     const weekRows = [
       { distance_m: 10000, duration_seconds: 3000 },
       { distance_m: 5000, duration_seconds: 1800 },
       { distance_m: null, duration_seconds: null },
     ];
-    fromImpl.mockReturnValue(makeBuilder({ data: latest }, { data: weekRows }));
+    fromImpl.mockReturnValue(makeBuilder({ data: latestRow }, { data: weekRows }));
 
     const result = await loadActivitySummary();
     expect(result).not.toBeNull();
-    expect(result!.latest).toEqual(latest);
+    expect(result!.latest).toEqual({
+      started_at: "2026-05-30T06:00:00Z",
+      sport: "run",
+      distance_m: 10000,
+      duration_seconds: 3000,
+      avg_pace_s_per_km: 300,
+      elevation_gain_m: 92,
+      notes: "Afternoon Run",
+      name: "Afternoon Run",
+      summary_polyline: "abc123",
+      kudos_count: 2,
+      achievement_count: 3,
+      device_name: "Garmin Instinct 2S Solar",
+      location: "Ballerup, Denmark",
+    });
     expect(result!.week.activities).toBe(3);
     expect(result!.week.km).toBeCloseTo(15, 5); // (10000 + 5000) / 1000
     expect(result!.week.hours).toBeCloseTo((3000 + 1800) / 3600, 5);

@@ -29,14 +29,25 @@ async function backendGet<T>(path: string): Promise<T | null> {
 }
 
 // ---- Types ---------------------------------------------------------------
+export type LatestActivity = {
+  started_at: string;
+  sport: string;
+  distance_m: number | null;
+  duration_seconds: number;
+  avg_pace_s_per_km: number | null;
+  elevation_gain_m: number | null;
+  notes: string | null;
+  /** Strava summary fields lifted from raw_payload (may be absent for other sources). */
+  name: string | null;
+  summary_polyline: string | null;
+  kudos_count: number | null;
+  achievement_count: number | null;
+  device_name: string | null;
+  location: string | null;
+};
+
 export type ActivitySummary = {
-  latest: {
-    started_at: string;
-    sport: string;
-    distance_m: number | null;
-    duration_seconds: number;
-    avg_pace_s_per_km: number | null;
-  } | null;
+  latest: LatestActivity | null;
   week: { activities: number; km: number; hours: number };
 } | null;
 
@@ -141,9 +152,11 @@ export async function loadActivitySummary(): Promise<ActivitySummary> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: latest } = await supabase
+  const { data: latestRow } = await supabase
     .from("workouts")
-    .select("started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km")
+    .select(
+      "started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km, elevation_gain_m, notes, raw_payload",
+    )
     .eq("user_id", user.id)
     .order("started_at", { ascending: false })
     .limit(1)
@@ -161,12 +174,40 @@ export async function loadActivitySummary(): Promise<ActivitySummary> {
   const seconds = weekRows.reduce((sum, r) => sum + (r.duration_seconds ?? 0), 0);
 
   return {
-    latest: (latest as NonNullable<ActivitySummary>["latest"]) ?? null,
+    latest: latestRow ? normalizeLatest(latestRow as Record<string, unknown>) : null,
     week: {
       activities: weekRows.length,
       km: meters / 1000,
       hours: seconds / 3600,
     },
+  };
+}
+
+/** Lift the Strava-card fields out of a workout row + its raw_payload JSON. */
+function normalizeLatest(row: Record<string, unknown>): LatestActivity {
+  const raw = (row.raw_payload ?? {}) as Record<string, unknown>;
+  const map = (raw.map ?? {}) as Record<string, unknown>;
+  const num = (v: unknown): number | null => (typeof v === "number" ? v : null);
+  const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
+
+  const locationParts = [raw.location_city, raw.location_state, raw.location_country]
+    .map(str)
+    .filter(Boolean);
+
+  return {
+    started_at: String(row.started_at),
+    sport: String(row.sport),
+    distance_m: num(row.distance_m),
+    duration_seconds: num(row.duration_seconds) ?? 0,
+    avg_pace_s_per_km: num(row.avg_pace_s_per_km),
+    elevation_gain_m: num(row.elevation_gain_m),
+    notes: str(row.notes),
+    name: str(raw.name) ?? str(row.notes),
+    summary_polyline: str(map.summary_polyline),
+    kudos_count: num(raw.kudos_count),
+    achievement_count: num(raw.achievement_count),
+    device_name: str(raw.device_name),
+    location: locationParts.length ? locationParts.join(", ") : null,
   };
 }
 

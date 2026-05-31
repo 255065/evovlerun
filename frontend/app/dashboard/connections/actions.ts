@@ -97,6 +97,7 @@ export type ConnectionStatus = {
   provider_user_id: string | null;
   expires_at: string | null;
   scope: string | null;
+  last_sync_at: string | null;
 };
 
 export async function getConnectionStatus(provider: string): Promise<ConnectionStatus | null> {

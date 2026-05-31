@@ -4,13 +4,15 @@ import {
   loadActivitySummary,
   loadCurrentPlan,
 } from "./actions";
-import { fmtDate, fmtDistance, fmtDuration, fmtPace } from "@/lib/format";
+import { fmtRelative } from "@/lib/format";
 import {
   connectProviderAction,
   disconnectProviderAction,
   getConnectionStatus,
+  syncProviderAction,
 } from "./connections/actions";
 import { CopyButton } from "./copy-button";
+import { LatestActivityCard } from "./latest-activity-card";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +32,8 @@ export default async function DashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const fullName = (user?.user_metadata?.full_name ?? "").split(" ")[0] || "athlete";
+  const athleteName = (user?.user_metadata?.full_name ?? "").trim() || "Athlete";
+  const fullName = athleteName.split(" ")[0] || "athlete";
 
   const [strava, activity, plan] = await Promise.all([
     getConnectionStatus("strava"),
@@ -56,14 +59,16 @@ export default async function DashboardPage() {
       <Section
         eyebrow="Connected sources"
         right={
-          !strava?.connected && (
-            <ConnectStravaButton />
-          )
+          strava?.connected ? <SyncNowButton /> : <ConnectStravaButton />
         }
       >
         <SourceRow
           name="Strava"
-          subtitle={strava?.connected ? "Synced — webhook listening for new activities" : "Not connected"}
+          subtitle={
+            strava?.connected
+              ? `Last synced ${fmtRelative(strava.last_sync_at)}`
+              : "Not connected"
+          }
           connected={strava?.connected ?? false}
           color="#fc4c02"
           icon={
@@ -102,8 +107,10 @@ export default async function DashboardPage() {
       <Section
         eyebrow="Latest activity"
         right={
-          latest && (
-            <span className="text-[12px] text-neutral-500">{fmtDate(latest.started_at)}</span>
+          strava?.connected && (
+            <span className="text-[12px] text-neutral-500">
+              Synced {fmtRelative(strava.last_sync_at)}
+            </span>
           )
         }
       >
@@ -114,16 +121,7 @@ export default async function DashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
-            <div className="text-[15px] font-semibold tracking-[-0.005em]">
-              {capitalize(latest.sport)}
-            </div>
-            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-neutral-600">
-              <span>{fmtDistance(latest.distance_m)}</span>
-              <span>{fmtDuration(latest.duration_seconds)}</span>
-              {latest.avg_pace_s_per_km != null && <span>{fmtPace(latest.avg_pace_s_per_km)}</span>}
-            </div>
-          </div>
+          <LatestActivityCard latest={latest} athleteName={athleteName} />
         )}
       </Section>
 
@@ -181,6 +179,23 @@ export default async function DashboardPage() {
           className="text-[13px] text-[color:var(--evr-accent)] hover:underline"
         >
           Connect
+        </button>
+      </form>
+    );
+  }
+
+  /** Manual re-sync — pulls the last 30 days from Strava (webhook is the
+   *  automatic path; this is the "I just finished, refresh now" escape hatch). */
+  function SyncNowButton() {
+    return (
+      <form action={syncProviderAction}>
+        <input type="hidden" name="provider" value="strava" />
+        <input type="hidden" name="days" value="30" />
+        <button
+          type="submit"
+          className="text-[13px] text-[color:var(--evr-accent)] hover:underline"
+        >
+          Sync now
         </button>
       </form>
     );

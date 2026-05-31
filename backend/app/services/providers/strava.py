@@ -175,6 +175,23 @@ class StravaProvider(ProviderClient):
 
         return out
 
+    async def fetch_activity_by_id(
+        self, tokens: ProviderTokens, activity_id: str
+    ) -> NormalizedActivity:
+        """Fetch a single activity by id — used by the webhook to ingest one push."""
+        headers = {"Authorization": f"Bearer {tokens.access_token}"}
+        async with httpx.AsyncClient(timeout=20.0, headers=headers) as client:
+            response = await client.get(f"{STRAVA_API_BASE}/activities/{activity_id}")
+        if response.status_code == 401:
+            raise ProviderAuthError("Strava token rejected (401)")
+        if response.status_code == 429:
+            raise ProviderRateLimitError("Strava rate limited (429)")
+        if response.status_code != 200:
+            raise ProviderError(
+                f"Strava activity fetch failed: {response.status_code} {response.text}"
+            )
+        return _normalize_activity(response.json())
+
     async def fetch_daily_metrics(
         self,
         tokens: ProviderTokens,

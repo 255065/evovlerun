@@ -64,96 +64,80 @@ export function EmptyState() {
 }
 
 function ActivePlan({ plan }: { plan: NonNullable<Awaited<ReturnType<typeof loadCurrentPlan>>> }) {
-  const bp = plan.blueprint;
+  const sessions = plan.next_14_days ?? [];
   return (
-    <div className="space-y-8">
-      <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-              Active plan
-            </div>
-            <div className="mt-1 text-[20px] font-semibold capitalize tracking-[-0.01em]">
-              {plan.race_type?.replace(/_/g, " ")}
-              {plan.philosophy && <span className="text-neutral-500"> · {plan.philosophy}</span>}
-            </div>
-            <div className="mt-1 text-[13px] text-neutral-600">
-              {plan.weeks} weeks{plan.race_date && ` · target ${plan.race_date}`}
-            </div>
-          </div>
-          {plan.current_phase && (
-            <span className="rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
-              {plan.current_phase}
-            </span>
-          )}
-        </div>
-
-        {bp?.guiding_principles && bp.guiding_principles.length > 0 && (
-          <div className="mt-5">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-neutral-500">
-              Guiding principles
-            </div>
-            <ul className="mt-2 space-y-1 text-[13.5px] text-neutral-700">
-              {bp.guiding_principles.map((p, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="text-neutral-400">•</span>
-                  <span>{p}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+    <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-6">
+      <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+        Next 14 days
       </div>
-
-      <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-6">
-        <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-          Next 14 days
-        </div>
-        {(plan.next_14_days ?? []).length === 0 ? (
-          <p className="mt-4 text-[13.5px] text-neutral-600">
-            No sessions in the next 14 days. Ask your AI coach to extend the plan.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-neutral-200/60">
-            {(plan.next_14_days ?? []).map((s, idx) => {
-              const isRest = s.session_type === "rest";
-              return (
-                <li key={`${s.scheduled_date}-${idx}`} className="py-3.5">
-                  <div className="flex items-start gap-4">
-                    <div className="w-16 shrink-0 font-mono text-[11px] text-neutral-500">
+      {sessions.length === 0 ? (
+        <p className="mt-4 text-[13.5px] text-neutral-600">
+          No sessions in the next 14 days. Ask your AI coach to extend the plan.
+        </p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-neutral-200/70 text-neutral-500">
+                <Th className="w-28">Day</Th>
+                <Th className="w-32">Session</Th>
+                <Th className="w-20">Duration</Th>
+                <Th className="w-20">Distance</Th>
+                <Th>Details</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s, idx) => {
+                const isRest = s.session_type === "rest";
+                return (
+                  <tr
+                    key={`${s.scheduled_date}-${idx}`}
+                    className="border-b border-neutral-200/50 align-top last:border-0"
+                  >
+                    <td className="py-3 pr-3">
                       <span className="block text-[13px] font-medium text-neutral-800">
                         {fmtWeekday(s.scheduled_date)}
                       </span>
-                      {fmtDate(s.scheduled_date)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-2">
-                        <span className={`text-[14.5px] font-medium ${isRest ? "text-neutral-500" : ""}`}>
-                          {fmtSessionType(s.session_type)}
-                        </span>
-                        {s.duration_min && (
-                          <span className="text-[12px] text-neutral-500">{s.duration_min} min</span>
-                        )}
-                        {s.distance_m && (
-                          <span className="text-[12px] text-neutral-500">
-                            {(s.distance_m / 1000).toFixed(1)} km
-                          </span>
-                        )}
-                      </div>
-                      {s.description && (
-                        <p className="mt-1 text-[13.5px] text-neutral-700">{s.description}</p>
-                      )}
+                      <span className="font-mono text-[11px] text-neutral-500">
+                        {fmtDate(s.scheduled_date)}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-3">
+                      <span
+                        className={`text-[14px] font-medium ${isRest ? "text-neutral-500" : ""}`}
+                      >
+                        {fmtSessionType(s.session_type)}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-3 text-[13px] text-neutral-600">
+                      {s.duration_min ? `${s.duration_min} min` : "—"}
+                    </td>
+                    <td className="py-3 pr-3 text-[13px] text-neutral-600">
+                      {s.distance_m ? `${(s.distance_m / 1000).toFixed(1)} km` : "—"}
+                    </td>
+                    <td className="py-3 text-[13px] text-neutral-700">
+                      {s.description ? <span>{s.description}</span> : <span className="text-neutral-400">—</span>}
                       {s.rationale && (
-                        <p className="mt-1 text-[12.5px] text-neutral-500">{s.rationale}</p>
+                        <p className="mt-1 text-[12px] text-neutral-500">{s.rationale}</p>
                       )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`pb-2 pr-3 font-mono text-[10.5px] font-medium uppercase tracking-[0.15em] ${className}`}
+    >
+      {children}
+    </th>
   );
 }
