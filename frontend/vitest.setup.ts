@@ -1,0 +1,3 @@
+// Runs before every test file. Adds jest-dom matchers (toBeInTheDocument,
+// toHaveTextContent, …) to Vitest's expect.
+import "@testing-library/jest-dom/vitest";

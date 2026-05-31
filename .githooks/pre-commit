@@ -1,0 +1,33 @@
+#!/bin/bash
+# Blocks commits that stage secret-bearing files. Enabled via:
+#   git config core.hooksPath .githooks
+# Catches the manual `git commit` path; the Claude Code secret-guard hook
+# covers the agent-edit path.
+
+set -euo pipefail
+
+staged="$(git diff --cached --name-only --diff-filter=AM)"
+[ -z "$staged" ] && exit 0
+
+blocked=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  base="$(basename "$f")"
+  case "$base" in
+    *.example|*.sample|*.template) continue ;;
+  esac
+  case "$base" in
+    .env|.env.*|*.key|*.pem|*.p12|*.pfx|secrets.json|credentials.json|service-account*.json)
+      blocked="$blocked  $f
+" ;;
+  esac
+done <<< "$staged"
+
+if [ -n "$blocked" ]; then
+  echo "✋ pre-commit: refusing to commit secret-bearing files:" >&2
+  printf '%s' "$blocked" >&2
+  echo "Move these out of the repo (use env vars), then 'git restore --staged <file>'." >&2
+  exit 1
+fi
+
+exit 0

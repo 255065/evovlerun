@@ -160,6 +160,21 @@ need more, expand `save-training-plan`'s argument schema instead of
 adding a 12th tool. LLM tool-selection accuracy collapses above ~15
 tools.
 
+## Feature Factory (.claude/)
+For non-trivial features, run the `feature-factory` skill — it drives 7
+agents (`.claude/agents/`) through research → story → spec → backend →
+frontend → verify → validate, with 3 human checkpoints (approve story,
+approve brief, approve PR). Standalone changes can use the
+`build-with-tests` skill for the same conventions.
+- **Builders are folder-scoped, hard-enforced.** A `PreToolUse` hook
+  (`.claude/hooks/scope-guard.sh`) reads `.claude/.active-scope` and blocks
+  writes outside the active half. It fail-opens when no sentinel exists, so
+  normal sessions aren't restricted. `secret-guard.sh` always blocks writes
+  to `.env`/`*.key`/`*.pem`/secrets files; a git pre-commit hook
+  (`.githooks/`, enabled via `core.hooksPath`) covers the commit path.
+- **Frontend tests**: Vitest + RTL. `cd frontend && npm run test`.
+- **Backend tests**: `cd backend && ./.venv/bin/python -m pytest -q`.
+
 ## Role / persona
 You are both a senior full-stack developer AND a sport scientist /
 endurance coach. Be proactive about technical refactors, tooling, and
