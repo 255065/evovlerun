@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
+  loadActivitySummary,
   loadCurrentPlan,
-  loadFitnessTimeline,
 } from "./actions";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtDistance, fmtDuration, fmtPace } from "@/lib/format";
 import {
   connectProviderAction,
   disconnectProviderAction,
@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
  * Chirona-style dashboard:
  *   - Connected sources (Strava — the only V1 provider)
  *   - AI coaches (Claude / ChatGPT / Gemini connector links)
- *   - Training load (CTL/ATL/TSB pulled from our existing timeline)
+ *   - Latest activity (most recent workout from Strava)
+ *   - This week (trailing-7-day activity / km / hours totals)
  *   - Quick prompts the user can fire into their chat connector
  *
  * No dense data tables, no nested cards. Each section is a single,
@@ -31,16 +32,14 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   const fullName = (user?.user_metadata?.full_name ?? "").split(" ")[0] || "athlete";
 
-  const [strava, timeline, plan] = await Promise.all([
+  const [strava, activity, plan] = await Promise.all([
     getConnectionStatus("strava"),
-    loadFitnessTimeline(90),
+    loadActivitySummary(),
     loadCurrentPlan(),
   ]);
 
-  const latest = timeline?.points[timeline.points.length - 1];
-  const ctl = latest?.ctl;
-  const atl = latest?.atl;
-  const tsb = latest?.tsb;
+  const latest = activity?.latest ?? null;
+  const week = activity?.week ?? { activities: 0, km: 0, hours: 0 };
   const todayIso = new Date().toISOString().slice(0, 10);
   const today = plan?.next_14_days?.find((s) => s.scheduled_date === todayIso);
 
@@ -99,30 +98,48 @@ export default async function DashboardPage() {
         </div>
       </Section>
 
-      {/* ─── Training load ───────────────────────────────────── */}
+      {/* ─── Latest activity ─────────────────────────────────── */}
       <Section
-        eyebrow="Training load"
+        eyebrow="Latest activity"
         right={
-          latest?.snapshot_date && (
-            <span className="text-[12px] text-neutral-500">Updated {fmtDate(latest.snapshot_date)}</span>
+          latest && (
+            <span className="text-[12px] text-neutral-500">{fmtDate(latest.started_at)}</span>
           )
         }
       >
-        {ctl == null && atl == null ? (
-          <p className="text-[13.5px] text-neutral-600">
-            We&apos;ll show your fitness once Strava has finished its first sync.
-          </p>
+        {latest === null ? (
+          <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+            <p className="text-[13.5px] text-neutral-600">
+              We&apos;ll show your latest activity once Strava has finished its first sync.
+            </p>
+          </div>
         ) : (
-          <div className="grid grid-cols-3 gap-x-8 gap-y-2">
-            <LoadStat label="Fitness (CTL)" value={ctl?.toFixed(0) ?? "—"} hint="42-day rolling load" />
-            <LoadStat label="Fatigue (ATL)" value={atl?.toFixed(0) ?? "—"} hint="7-day rolling load" />
-            <LoadStat
-              label="Form (TSB)"
-              value={tsb != null ? `${tsb >= 0 ? "+" : ""}${tsb.toFixed(0)}` : "—"}
-              hint={tsbHint(tsb)}
-            />
+          <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+            <div className="text-[15px] font-semibold tracking-[-0.005em]">
+              {capitalize(latest.sport)}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-neutral-600">
+              <span>{fmtDistance(latest.distance_m)}</span>
+              <span>{fmtDuration(latest.duration_seconds)}</span>
+              {latest.avg_pace_s_per_km != null && <span>{fmtPace(latest.avg_pace_s_per_km)}</span>}
+            </div>
           </div>
         )}
+      </Section>
+
+      {/* ─── This week ───────────────────────────────────────── */}
+      <Section eyebrow="This week">
+        <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-4">
+          {week.activities === 0 ? (
+            <p className="text-[13.5px] text-neutral-600">No activities in the last 7 days.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-x-8 gap-y-2">
+              <LoadStat label="Activities" value={String(week.activities)} />
+              <LoadStat label="Total km" value={week.km.toFixed(1)} />
+              <LoadStat label="Total hours" value={week.hours.toFixed(1)} />
+            </div>
+          )}
+        </div>
 
         {today && (
           <div className="mt-5 rounded-xl border border-neutral-200/70 bg-white/60 p-4">
@@ -265,12 +282,11 @@ function CoachRow({ name, subtitle, color }: { name: string; subtitle: string; c
   );
 }
 
-function LoadStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function LoadStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="font-mono text-[10.5px] uppercase tracking-[0.15em] text-neutral-500">{label}</div>
       <div className="mt-1 text-[28px] font-semibold tracking-[-0.02em] leading-none">{value}</div>
-      <div className="mt-1 text-[12px] text-neutral-600">{hint}</div>
     </div>
   );
 }
@@ -299,13 +315,6 @@ const QUICK_PROMPTS = [
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────
-
-function tsbHint(t: number | null | undefined): string {
-  if (t == null) return "—";
-  if (t > 5) return "Fresh — ready to push";
-  if (t < -10) return "Fatigued — recover";
-  return "Neutral";
-}
 
 function planRowSub(s: {
   duration_min: number | null;

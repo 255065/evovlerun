@@ -29,22 +29,36 @@ export default async function TrainingPage() {
   );
 }
 
-function EmptyState() {
+export function EmptyState() {
   return (
     <div className="rounded-2xl border border-neutral-200/70 bg-white/70 p-8 text-center">
       <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
         No plan yet
       </div>
+      <h2 className="mt-3 text-[20px] font-semibold tracking-[-0.01em]">
+        Create a training plan with your chatbot
+      </h2>
       <p className="mx-auto mt-3 max-w-md text-[14.5px] text-neutral-700">
-        Ask Claude, ChatGPT, or Gemini to write you a training plan, then tell it to
-        save the plan to EvolveRun. It will appear here.
+        EvolveRun doesn&apos;t generate plans in the app. Ask your connected AI coach —
+        Claude, ChatGPT, or Gemini — through the EvolveRun connector to build a plan and
+        save it. Once saved, it shows up here automatically.
       </p>
-      <Link
-        href="/dashboard/mcp"
-        className="mt-5 inline-flex items-center rounded-md bg-neutral-950 px-4 py-2 text-[13px] font-medium text-white"
-      >
-        Set up the connector
-      </Link>
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
+        <a
+          href="https://claude.ai"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center rounded-md bg-neutral-950 px-4 py-2 text-[13px] font-medium text-white"
+        >
+          Open Claude
+        </a>
+        <Link
+          href="/dashboard/mcp"
+          className="text-[13px] text-[color:var(--evr-accent)] hover:underline"
+        >
+          Set up the connector
+        </Link>
+      </div>
     </div>
   );
 }

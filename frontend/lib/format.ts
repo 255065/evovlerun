@@ -23,13 +23,13 @@ export function fmtDistance(meters: number | null | undefined): string {
 }
 
 const LIMITER_LABELS: Record<string, string> = {
-  aerobic_capacity: "Aerob kapacitet",
+  aerobic_capacity: "Aerobic capacity",
   lactate_threshold: "Lactate threshold",
-  muscular_endurance: "Muskulær udholdenhed",
-  running_economy: "Løbeøkonomi",
-  anaerobic_capacity: "Anaerob kapacitet",
-  recovery: "Restitution",
-  neuromuscular: "Neuromuskulær",
+  muscular_endurance: "Muscular endurance",
+  running_economy: "Running economy",
+  anaerobic_capacity: "Anaerobic capacity",
+  recovery: "Recovery",
+  neuromuscular: "Neuromuscular",
 };
 
 export function fmtLimiter(slug: string | null | undefined): string {
@@ -45,12 +45,12 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
   intervals: "Intervals",
   vo2max: "VO2max",
   fartlek: "Fartlek",
-  hills: "Bakketræning",
+  hills: "Hills",
   recovery: "Recovery",
   race: "Race",
-  strength: "Styrke",
+  strength: "Strength",
   cross_training: "Cross-training",
-  rest: "Hvile",
+  rest: "Rest",
 };
 
 export function fmtSessionType(slug: string | null | undefined): string {
@@ -58,24 +58,24 @@ export function fmtSessionType(slug: string | null | undefined): string {
   return SESSION_TYPE_LABELS[slug] ?? slug;
 }
 
-const DAYS_DA = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function fmtWeekday(iso: string): string {
   const d = new Date(iso);
-  return DAYS_DA[d.getDay()];
+  return DAYS[d.getDay()];
 }
 
 export function fmtDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("da-DK", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 export function acwrZone(acwr: number | null | undefined): {
   label: string;
   tone: "success" | "warn" | "danger" | "info";
 } {
-  if (acwr == null) return { label: "Ingen data", tone: "info" };
+  if (acwr == null) return { label: "No data", tone: "info" };
   if (acwr < 0.8) return { label: "Detraining / undertrained", tone: "warn" };
   if (acwr <= 1.3) return { label: "Optimal sweet spot", tone: "success" };
-  if (acwr <= 1.5) return { label: "Forhøjet skaderisiko", tone: "warn" };
-  return { label: "Høj skaderisiko", tone: "danger" };
+  if (acwr <= 1.5) return { label: "Elevated injury risk", tone: "warn" };
+  return { label: "High injury risk", tone: "danger" };
 }

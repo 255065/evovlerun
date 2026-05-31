@@ -8,6 +8,7 @@ push lets the assistant slot in an ad-hoc session ("add a 6 km easy on
 Tuesday"). delete removes a session by id.
 """
 
+import math
 import os
 from datetime import date
 from typing import Any
@@ -148,7 +149,47 @@ def save_training_plan(
     if not sessions:
         return {"error": "sessions list is empty — nothing to save"}
 
-    # Find the active plan to attach sessions to.
+    # Validate + normalise rows before touching any plan. We defer setting
+    # plan_id (filled in below once we know which plan the rows attach to).
+    rows = []
+    errors = []
+    for i, s in enumerate(sessions):
+        if not isinstance(s, dict):
+            errors.append(f"session {i}: must be an object")
+            continue
+        if "scheduled_date" not in s or "session_type" not in s:
+            errors.append(f"session {i}: missing scheduled_date or session_type")
+            continue
+        if s["session_type"] not in VALID_SESSION_TYPES:
+            errors.append(f"session {i}: invalid session_type {s['session_type']!r}")
+            continue
+        try:
+            d = date.fromisoformat(s["scheduled_date"])
+        except ValueError:
+            errors.append(f"session {i}: scheduled_date {s['scheduled_date']!r} not YYYY-MM-DD")
+            continue
+        rows.append({
+            "user_id": user_id,
+            "scheduled_date": d.isoformat(),
+            "session_type": s["session_type"],
+            "sport": s.get("sport") or "running",
+            "duration_min": s.get("duration_min"),
+            "distance_m": s.get("distance_m"),
+            "description": s.get("description"),
+            "rationale": s.get("rationale"),
+            "intensity_zones": s.get("intensity_zones") or {},
+            "status": "scheduled",
+            "ai_adjustments": [{
+                "by": "assistant",
+                "mode": mode,
+                "plan_summary": plan_summary,
+            }],
+        })
+
+    if not rows:
+        return {"ok": False, "errors": errors}
+
+    # Find the newest active plan to attach sessions to.
     active = (
         client.table("training_plans")
         .select("id, race_type, race_date, philosophy")
@@ -160,15 +201,34 @@ def save_training_plan(
         .data
         or []
     )
-    if not active:
-        return {
-            "error": (
-                "No active training plan to attach sessions to. The user should "
-                "either generate a plan first (via /dashboard/training) or set "
-                "a goal so we can create an open-ended plan to hang sessions on."
-            ),
-        }
-    plan_id = active[0]["id"]
+    plan_created = False
+    if active:
+        plan_id = active[0]["id"]
+    else:
+        # No active plan yet — create an open-ended one to hang sessions on so
+        # the dashboard's plan view picks them up. Span the validated rows.
+        dates = [date.fromisoformat(r["scheduled_date"]) for r in rows]
+        span_days = (max(dates) - min(dates)).days
+        weeks = max(1, math.ceil((span_days + 1) / 7))
+        new_plan = (
+            client.table("training_plans")
+            .insert({
+                "user_id": user_id,
+                "race_type": "general_fitness",
+                "philosophy": "polarized",
+                "start_date": date.today().isoformat(),
+                "weeks": weeks,
+                "plan_json": {},
+                "status": "active",
+            })
+            .execute()
+        )
+        plan_id = new_plan.data[0]["id"]
+        plan_created = True
+
+    # Attach the validated rows to the resolved plan.
+    for r in rows:
+        r["plan_id"] = plan_id
 
     # Replace mode: wipe the window first so we don't end up with stacked sessions.
     deleted_count = 0
@@ -192,46 +252,6 @@ def save_training_plan(
         )
         deleted_count = len(wipe.data or [])
 
-    # Validate + normalise rows before inserting.
-    rows = []
-    errors = []
-    for i, s in enumerate(sessions):
-        if not isinstance(s, dict):
-            errors.append(f"session {i}: must be an object")
-            continue
-        if "scheduled_date" not in s or "session_type" not in s:
-            errors.append(f"session {i}: missing scheduled_date or session_type")
-            continue
-        if s["session_type"] not in VALID_SESSION_TYPES:
-            errors.append(f"session {i}: invalid session_type {s['session_type']!r}")
-            continue
-        try:
-            d = date.fromisoformat(s["scheduled_date"])
-        except ValueError:
-            errors.append(f"session {i}: scheduled_date {s['scheduled_date']!r} not YYYY-MM-DD")
-            continue
-        rows.append({
-            "plan_id": plan_id,
-            "user_id": user_id,
-            "scheduled_date": d.isoformat(),
-            "session_type": s["session_type"],
-            "sport": s.get("sport") or "running",
-            "duration_min": s.get("duration_min"),
-            "distance_m": s.get("distance_m"),
-            "description": s.get("description"),
-            "rationale": s.get("rationale"),
-            "intensity_zones": s.get("intensity_zones") or {},
-            "status": "scheduled",
-            "ai_adjustments": [{
-                "by": "assistant",
-                "mode": mode,
-                "plan_summary": plan_summary,
-            }],
-        })
-
-    if errors and not rows:
-        return {"ok": False, "errors": errors}
-
     inserted = client.table("planned_workouts").insert(rows).execute()
     inserted_count = len(inserted.data or rows)
 
@@ -244,6 +264,7 @@ def save_training_plan(
         "ok": True,
         "mode": mode,
         "plan_id": plan_id,
+        "plan_created": plan_created,
         "sessions_saved": inserted_count,
         "sessions_replaced": deleted_count,
         "errors": errors if errors else None,

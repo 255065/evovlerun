@@ -299,7 +299,7 @@ def _athlete_snapshot(user_id: str) -> str:
             client.table("workouts")
             .select("distance_m, duration_seconds, sport")
             .eq("user_id", user_id)
-            .gte("start_time", last_7)
+            .gte("started_at", last_7)
             .execute()
             .data
             or []
@@ -308,7 +308,7 @@ def _athlete_snapshot(user_id: str) -> str:
             client.table("workouts")
             .select("distance_m, duration_seconds, sport")
             .eq("user_id", user_id)
-            .gte("start_time", last_28)
+            .gte("started_at", last_28)
             .execute()
             .data
             or []

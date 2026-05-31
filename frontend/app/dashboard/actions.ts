@@ -29,18 +29,16 @@ async function backendGet<T>(path: string): Promise<T | null> {
 }
 
 // ---- Types ---------------------------------------------------------------
-export type FitnessPoint = {
-  snapshot_date: string;
-  ctl: number | null;
-  atl: number | null;
-  tsb: number | null;
-  acwr: number | null;
-};
-
-export type FitnessTimeline = {
-  days: number;
-  points: FitnessPoint[];
-};
+export type ActivitySummary = {
+  latest: {
+    started_at: string;
+    sport: string;
+    distance_m: number | null;
+    duration_seconds: number;
+    avg_pace_s_per_km: number | null;
+  } | null;
+  week: { activities: number; km: number; hours: number };
+} | null;
 
 export type PlannedSession = {
   scheduled_date: string;
@@ -92,10 +90,6 @@ export type Profile = {
 };
 
 // ---- Loaders -------------------------------------------------------------
-export async function loadFitnessTimeline(days = 90): Promise<FitnessTimeline | null> {
-  return backendGet<FitnessTimeline>(`/performance/timeline?days=${days}`);
-}
-
 export async function loadCurrentPlan(): Promise<CurrentPlan | null> {
   return backendGet<CurrentPlan>("/training/plan/current");
 }
@@ -137,6 +131,43 @@ export async function loadLatestRecovery(): Promise<{
     .limit(1)
     .maybeSingle();
   return data;
+}
+
+/** Latest workout + trailing-7-day totals — read directly from Supabase (RLS). */
+export async function loadActivitySummary(): Promise<ActivitySummary> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: latest } = await supabase
+    .from("workouts")
+    .select("started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km")
+    .eq("user_id", user.id)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const { data: rows } = await supabase
+    .from("workouts")
+    .select("distance_m, duration_seconds")
+    .eq("user_id", user.id)
+    .gte("started_at", since);
+
+  const weekRows = (rows ?? []) as { distance_m: number | null; duration_seconds: number | null }[];
+  const meters = weekRows.reduce((sum, r) => sum + (r.distance_m ?? 0), 0);
+  const seconds = weekRows.reduce((sum, r) => sum + (r.duration_seconds ?? 0), 0);
+
+  return {
+    latest: (latest as NonNullable<ActivitySummary>["latest"]) ?? null,
+    week: {
+      activities: weekRows.length,
+      km: meters / 1000,
+      hours: seconds / 3600,
+    },
+  };
 }
 
 // ---- Mutations -----------------------------------------------------------
