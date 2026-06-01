@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EvolveRun — Launch Demo</title>
+<!--
+  Self-contained autoplaying "launch video" for EvolveRun.
+  Pure HTML/CSS/JS, no build step, no required network assets (the Google
+  Fonts link is a progressive enhancement; a serif fallback is used offline).
+  Open directly in a browser; it autoplays and loops. Designed to be
+  screen-recorded at 1280x720 for a real launch video.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --warm: #f5f0e8;
+    --warm-card: #fbf8f1;
+    --dark: #1a1612;
+    --muted: #6b6259;
+    --accent: #dc6b3f;
+    --strava: #fc4c02;
+    --good: #1f8f5f;
+    --serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --scene: 4s; /* duration of each scene */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: #0e0c0a;
+    font-family: var(--sans);
+    color: var(--dark);
+    overflow: hidden;
+  }
+
+  /* Letterboxed stage, 16:9, scales to viewport */
+  .stage-wrap {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #241d17 0%, #0e0c0a 60%);
+  }
+  .stage {
+    position: relative;
+    width: min(100vw, 177.78vh);
+    aspect-ratio: 16 / 9;
+    background: var(--warm);
+    overflow: hidden;
+    border-radius: 14px;
+    box-shadow: 0 40px 120px rgba(0,0,0,.55);
+  }
+
+  /* Brand ambience */
+  .aurora {
+    position: absolute; pointer-events: none; border-radius: 50%;
+    filter: blur(60px); opacity: .55; mix-blend-mode: multiply;
+  }
+  .aurora.a { width: 46%; height: 70%; top: -14%; right: 4%;
+    background: radial-gradient(closest-side, rgba(220,107,63,.55), transparent 72%); }
+  .aurora.b { width: 38%; height: 56%; bottom: -12%; left: -6%;
+    background: radial-gradient(closest-side, rgba(252,76,2,.40), transparent 72%);
+    animation: drift 14s ease-in-out infinite alternate; }
+  @keyframes drift { to { transform: translate(8%, -6%) scale(1.1); } }
+  .grain {
+    position: absolute; inset: 0; pointer-events: none; opacity: .05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Top chrome: wordmark + loop progress */
+  .chrome {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 6;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: clamp(14px, 2.2vw, 28px) clamp(18px, 3vw, 40px);
+  }
+  .wordmark { display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: clamp(14px, 1.5vw, 20px); letter-spacing: -.01em; }
+  .wordmark svg { width: 1.25em; height: 1.25em; }
+  .badge {
+    font-size: clamp(10px, 1.05vw, 13px); font-weight: 600; color: var(--accent);
+    background: #fff; border: 1px solid rgba(26,22,18,.10);
+    padding: .45em .8em; border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(26,22,18,.05);
+  }
+  .progress { position: absolute; left: 0; bottom: 0; height: 4px; z-index: 8;
+    width: 100%; background: rgba(26,22,18,.08); }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--accent);
+    box-shadow: 0 0 12px rgba(220,107,63,.6); }
+
+  /* Scenes */
+  .scene {
+    position: absolute; inset: 0; z-index: 2;
+    display: grid; place-items: center;
+    padding: clamp(40px, 7vw, 110px) clamp(28px, 6vw, 96px);
+    opacity: 0; transform: translateY(18px) scale(.99);
+    transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1);
+    text-align: center;
+  }
+  .scene.active { opacity: 1; transform: none; z-index: 3; }
+
+  .eyebrow { font-family: var(--sans); font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; font-size: clamp(10px, 1.05vw, 13px); color: var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 600; letter-spacing: -.03em;
+    line-height: .98; font-size: clamp(34px, 6.4vw, 92px); }
+  h1 .accent { color: var(--accent); }
+  .lede { font-size: clamp(15px, 1.7vw, 24px); color: var(--muted); margin-top: .7em;
+    max-width: 22ch; }
+
+  /* staggered rise for children of the active scene */
+  .scene.active .rise { animation: rise .7s cubic-bezier(.22,1,.36,1) both; }
+  .scene.active .rise.d1 { animation-delay: .08s; }
+  .scene.active .rise.d2 { animation-delay: .18s; }
+  .scene.active .rise.d3 { animation-delay: .30s; }
+  .scene.active .rise.d4 { animation-delay: .44s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+
+  .stack { display: grid; gap: clamp(14px, 1.8vw, 26px); justify-items: center; }
+
+  /* Logo intro mark */
+  .mark { width: clamp(64px, 9vw, 132px); height: clamp(64px, 9vw, 132px);
+    display: grid; place-items: center; border-radius: 26px;
+    background: var(--dark); box-shadow: 0 24px 60px rgba(26,22,18,.28); }
+  .mark svg { width: 58%; height: 58%; }
+
+  /* Cards */
+  .card { background: var(--warm-card); border: 1px solid rgba(26,22,18,.10);
+    border-radius: 20px; box-shadow: 0 24px 70px rgba(26,22,18,.10);
+    width: min(680px, 86%); padding: clamp(18px, 2.4vw, 30px); text-align: left; }
+  .card-head { display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid rgba(26,22,18,.08); padding-bottom: 14px; margin-bottom: 16px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot.r{background:#ff5f57}.dot.y{background:#ffbd2e}.dot.g{background:#28c840}
+  .card-head .url { margin-left: 8px; font-size: clamp(11px,1.1vw,14px); color: var(--muted); }
+
+  /* Connect Strava tile */
+  .tile { display:flex; align-items:center; gap:16px; padding: clamp(16px,2vw,24px);
+    border-radius: 16px; border:1px solid rgba(26,22,18,.10); background:#fff;
+    width:min(560px,88%); }
+  .tile .logo { width:52px;height:52px;border-radius:14px;display:grid;place-items:center;
+    background:var(--strava); color:#fff; font-weight:800; font-size:24px; }
+  .tile .t { font-weight:600; font-size: clamp(16px,1.7vw,22px); }
+  .tile .s { color:var(--muted); font-size: clamp(12px,1.2vw,15px); }
+  .status { margin-left:auto; font-weight:600; font-size: clamp(12px,1.2vw,15px);
+    color: var(--muted); display:flex; align-items:center; gap:8px; }
+  .scene.active .status .ok { animation: pop .5s .9s both; }
+  .check { width:22px;height:22px;border-radius:50%;background:var(--good);color:#fff;
+    display:inline-grid;place-items:center;font-size:13px; }
+  @keyframes pop { from{opacity:0;transform:scale(.5)} to{opacity:1;transform:none} }
+
+  /* Connector chips */
+  .chips { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .chip { background:#fff; border:1px solid rgba(26,22,18,.12); border-radius:14px;
+    padding: clamp(12px,1.4vw,18px) clamp(16px,1.8vw,24px); font-weight:600;
+    font-size: clamp(13px,1.3vw,17px); display:flex; align-items:center; gap:10px;
+    box-shadow: 0 10px 30px rgba(26,22,18,.06); }
+  .chip .pulse { width:9px;height:9px;border-radius:50%;background:var(--good); }
+  .scene.active .chip .pulse { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(31,143,95,.5)} 50%{box-shadow:0 0 0 7px rgba(31,143,95,0)} }
+
+  /* Chat / analyze */
+  .bubble { background: var(--dark); color:#fff; border-radius:14px; padding:14px 16px;
+    font-size: clamp(13px,1.3vw,17px); }
+  .bubble .who { font-size:.72em; color: rgba(255,255,255,.55); font-weight:600; margin-bottom:4px; }
+  .toolcall { display:flex; justify-content:space-between; align-items:center;
+    border:1px solid rgba(220,107,63,.30); background: rgba(220,107,63,.08);
+    border-radius:12px; padding:11px 14px; margin-top:12px; }
+  .toolcall code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color:#9e4728;
+    font-size: clamp(11px,1.1vw,14px); }
+  .toolcall span { color: var(--muted); font-size: clamp(11px,1.1vw,14px); }
+  .metrics { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .metric { border:1px solid rgba(26,22,18,.10); border-radius:14px; background:#fff; padding:14px 16px; }
+  .metric .lbl { font-size:.72em; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .metric .val { font-family: var(--serif); font-weight:600; letter-spacing:-.03em;
+    font-size: clamp(22px,2.8vw,38px); margin-top:6px; }
+  .metric .val small { font-size:.45em; color:var(--muted); font-family:var(--sans); font-weight:500; }
+  .metric .imp { color: var(--good); font-size:.72em; margin-top:2px; font-weight:600; }
+  .bar { height:7px; border-radius:99px; background: rgba(26,22,18,.10); margin-top:16px; overflow:hidden; }
+  .bar > i { display:block; height:100%; width:0; border-radius:99px;
+    background: linear-gradient(90deg, var(--accent), var(--strava)); }
+  .scene.active .bar > i { animation: grow 1.6s .5s cubic-bezier(.22,1,.36,1) forwards; }
+  @keyframes grow { to { width: 86%; } }
+  .conclusion { margin-top:12px; font-size: clamp(12px,1.2vw,15px); color:#7a3f24; }
+
+  /* CTA */
+  .cta-btn { background: var(--dark); color:#fff; border-radius:999px;
+    padding: clamp(14px,1.6vw,20px) clamp(26px,3vw,44px); font-weight:600;
+    font-size: clamp(15px,1.6vw,22px); box-shadow: 0 20px 50px rgba(26,22,18,.25); }
+  .scene.active .cta-btn { animation: breathe 2.2s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{transform:none} 50%{transform:translateY(-3px) scale(1.02)} }
+  .url-pill { margin-top: 1em; color: var(--muted); font-size: clamp(13px,1.3vw,17px); }
+  .url-pill b { color: var(--dark); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scene { transition: opacity .3s linear; transform: none; }
+    .scene.active .rise, .aurora.b, .scene.active .cta-btn,
+    .scene.active .chip .pulse { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stage-wrap">
+  <div class="stage" id="stage">
+    <div class="aurora a"></div>
+    <div class="aurora b"></div>
+    <div class="grain"></div>
+
+    <div class="chrome">
+      <div class="wordmark">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 5 H17" stroke="#1a1612" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M3 12 Q9 8 15 12 T21 12" stroke="#dc6b3f" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+          <path d="M3 19 H13" stroke="#1a1612" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        EvolveRun
+      </div>
+      <div class="badge">★ Launching on Product Hunt today</div>
+    </div>
+
+    <!-- Scene 1 — Logo intro -->
+    <section class="scene" data-scene="0">
+      <div class="stack">
+        <div class="mark rise">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 5 H17" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M3 12 Q9 8 15 12 T21 12" stroke="#dc6b3f" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+            <path d="M3 19 H13" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="rise d1">EvolveRun</h1>
+        <p class="lede rise d2">Your AI coach, powered by Strava.</p>
+      </div>
+    </section>
+
+    <!-- Scene 2 — Hook -->
+    <section class="scene" data-scene="1">
+      <div class="stack">
+        <div class="eyebrow rise">Understand your training with AI</div>
+        <h1 class="rise d1">Connect Strava to<br><span class="accent">ChatGPT &amp; Claude</span></h1>
+        <p class="lede rise d2" style="max-width:34ch">Turn your Strava history into a secure connector for the AI you already use.</p>
+      </div>
+    </section>
+
+    <!-- Scene 3 — Connect Strava -->
+    <section class="scene" data-scene="2">
+      <div class="stack" style="width:100%">
+        <div class="eyebrow rise">Step 1</div>
+        <h1 class="rise d1" style="font-size:clamp(26px,4vw,56px)">Connect Strava once.</h1>
+        <div class="tile rise d2">
+          <div class="logo">S</div>
+          <div>
+            <div class="t">Strava</div>
+            <div class="s">Activities · routes · splits · heart rate · power</div>
+          </div>
+          <div class="status"><span class="ok"><span class="check">✓</span></span> Connected</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 4 — Add connector -->
+    <section class="scene" data-scene="3">
+      <div class="stack">
+        <div class="eyebrow rise">Step 2</div>
+        <h1 class="rise d1" style="font-size:clamp(26px,4vw,56px)">Add EvolveRun to your AI.</h1>
+        <div class="chips rise d2">
+          <div class="chip"><span class="pulse"></span>Claude</div>
+          <div class="chip"><span class="pulse"></span>ChatGPT</div>
+          <div class="chip"><span class="pulse"></span>Gemini</div>
+        </div>
+        <p class="lede rise d3" style="max-width:32ch">A hosted custom connector — no desktop JSON setup.</p>
+      </div>
+    </section>
+
+    <!-- Scene 5 — Ask & analyze -->
+    <section class="scene" data-scene="4">
+      <div class="stack" style="width:100%">
+        <div class="eyebrow rise">Step 3 — Ask anything</div>
+        <div class="card rise d1">
+          <div class="card-head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="url">claude.ai · EvolveRun connected</span></div>
+          <div class="bubble"><div class="who">You</div>How has my easy-run pace trended since January?</div>
+          <div class="toolcall"><code>get-period-summary</code><span>Jan–Mar · easy runs</span></div>
+          <div class="metrics">
+            <div class="metric">
+              <div class="lbl">Easy pace</div>
+              <div class="val"><span id="pace">5:23</span> <small>/km</small></div>
+              <div class="imp">improving ↓</div>
+            </div>
+            <div class="metric">
+              <div class="lbl">Avg HR</div>
+              <div class="val"><span id="hr">149</span> <small>bpm</small></div>
+              <div class="imp">improving ↓</div>
+            </div>
+          </div>
+          <div class="bar"><i></i></div>
+          <div class="conclusion">Aerobic efficiency improving — same effort at a lower heart rate.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scene 6 — CTA -->
+    <section class="scene" data-scene="5">
+      <div class="stack">
+        <div class="eyebrow rise">Your training, finally understood</div>
+        <h1 class="rise d1">Start your<br><span class="accent">free trial.</span></h1>
+        <div class="cta-btn rise d2">Connect Strava →</div>
+        <div class="url-pill rise d3"><b>evolverun.app</b> · €9/mo · cancel anytime</div>
+      </div>
+    </section>
+
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const SCENE_MS = 4000;                  // per scene
+  const scenes = [...document.querySelectorAll(".scene")];
+  const N = scenes.length;
+  const TOTAL = SCENE_MS * N;
+  const bar = document.getElementById("bar");
+  const paceEl = document.getElementById("pace");
+  const hrEl = document.getElementById("hr");
+
+  const fmtPace = s => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`;
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+
+  // Animate a number over `dur` ms when its scene becomes active.
+  function countTo(el, from, to, dur, fmt) {
+    const t0 = performance.now();
+    function step(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      const v = from + (to - from) * easeOut(t);
+      el.textContent = fmt ? fmt(v) : String(Math.round(v));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  let current = -1;
+  function show(i) {
+    if (i === current) return;
+    current = i;
+    scenes.forEach((s, k) => s.classList.toggle("active", k === i));
+    // Scene 5 (index 4): kick off the metric count-ups in sync with the bar.
+    if (i === 4) {
+      paceEl.textContent = "5:23"; hrEl.textContent = "149";
+      setTimeout(() => {
+        countTo(paceEl, 323, 308, 1500, fmtPace);
+        countTo(hrEl, 149, 145, 1500);
+      }, 500);
+    }
+  }
+
+  const t0 = performance.now();
+  function tick(now) {
+    const elapsed = (now - t0) % TOTAL;
+    const idx = Math.floor(elapsed / SCENE_MS);
+    show(idx);
+    bar.style.width = (elapsed / TOTAL * 100).toFixed(2) + "%";
+    requestAnimationFrame(tick);
+  }
+  show(0);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
