@@ -84,3 +84,104 @@ body {
   color: #ededed;
   min-height: 100vh;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+ * ELEVATED-ONLY polish layer (additive). These utilities layer richer
+ * background, grain texture, aurora glow, and micro-interaction helpers
+ * on top of the faithful redesign without renaming any existing tokens.
+ * ────────────────────────────────────────────────────────────────── */
+
+/* Layered warm gradient wash for the landing hero / page top. */
+.evr-warm-wash {
+  background:
+    radial-gradient(1100px 620px at 78% -8%, rgba(220, 107, 63, 0.16), transparent 60%),
+    radial-gradient(900px 560px at 8% 4%, rgba(252, 76, 2, 0.08), transparent 55%),
+    linear-gradient(180deg, #f7f2ea 0%, var(--evr-bg-warm) 36%, #f3ede3 100%);
+}
+
+/* Fine grain/noise overlay — pure inline SVG feTurbulence, no assets.
+ * Apply to a positioned ::before-style layer or directly as a low-opacity
+ * texture. Pointer-events none so it never intercepts clicks. */
+.evr-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Soft animated aurora glow — sits behind hero content. */
+.evr-aurora {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(64px);
+  background:
+    radial-gradient(closest-side, rgba(220, 107, 63, 0.42), transparent 72%);
+  animation: evr-aurora-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes evr-aurora-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.7; }
+  100% { transform: translate3d(4%, -6%, 0) scale(1.12); opacity: 0.95; }
+}
+
+/* Gentle pulse for the "connected" Strava tile / live dots. */
+.evr-pulse {
+  animation: evr-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes evr-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(252, 76, 2, 0.45); }
+  50% { opacity: 0.85; box-shadow: 0 0 0 5px rgba(252, 76, 2, 0); }
+}
+
+/* Marquee for the supported-platforms strip. */
+.evr-marquee {
+  display: flex;
+  width: max-content;
+  animation: evr-marquee 32s linear infinite;
+}
+
+@keyframes evr-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* CTA hover lift — additive micro-interaction helper. */
+.evr-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+.evr-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -8px rgba(26, 22, 18, 0.28);
+}
+
+/* Card hover elevation — additive helper for dashboard + landing cards. */
+.evr-card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.evr-card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px -16px rgba(26, 22, 18, 0.22);
+  border-color: rgba(220, 107, 63, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evr-aurora,
+  .evr-pulse,
+  .evr-marquee {
+    animation: none;
+  }
+  .evr-lift,
+  .evr-card-hover {
+    transition: none;
+  }
+  .evr-lift:hover,
+  .evr-card-hover:hover {
+    transform: none;
+  }
+}

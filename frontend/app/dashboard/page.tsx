@@ -240,7 +240,7 @@ function SourceRow({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
+    <div className="evr-card-hover flex items-center gap-4 rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1] p-4">
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white"
         style={{ background: color }}
@@ -252,7 +252,8 @@ function SourceRow({
         <div className="truncate text-[12.5px] text-[#6b6259]">{subtitle}</div>
       </div>
       {connected ? (
-        <span className="rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
+          <span className="evr-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
           Synced
         </span>
       ) : (
