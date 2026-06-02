@@ -67,13 +67,6 @@ export default async function ConsentPage({
             </p>
           </div>
 
-          <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-            <strong>Verify the redirect URI:</strong>{" "}
-            <code className="break-all font-mono">{params.redirect_uri}</code>
-            <br />
-            If this isn&apos;t Claude.ai (or the client you added yourself), click Cancel.
-          </div>
-
           <form action={approveOAuthAction} className="flex gap-3 pt-2">
             <input type="hidden" name="client_id" value={params.client_id} />
             <input type="hidden" name="redirect_uri" value={params.redirect_uri} />
