@@ -7,10 +7,13 @@ The shape we implement:
   POST /oauth/approve       Frontend posts here when user clicks "Allow";
                             we mint an authorization code and 302 back to
                             the client's redirect_uri.
-  POST /oauth/token         Exchange code (+ PKCE verifier) for access token
+  POST /oauth/token         Exchange code (+ PKCE verifier) for access token,
+                            or exchange a refresh token for a fresh pair.
 
-We don't implement refresh tokens yet — Claude.ai accepts a 1h access token
-and re-authorizes on expiry, which is good enough for v1.
+The token response includes a long-lived refresh token, and /oauth/token
+accepts `grant_type=refresh_token` so Claude.ai can silently renew its 1h
+access token instead of forcing the user to reconnect. Refresh tokens are
+rotated on every use.
 """
 
 from __future__ import annotations
@@ -35,8 +38,10 @@ from app.services.oauth_clients import (
 from app.services.oauth_jwt import (
     issue_access_token,
     issue_authorization_code,
+    issue_refresh_token,
     verify_authorization_code,
     verify_pkce,
+    verify_refresh_token,
 )
 
 log = logging.getLogger(__name__)
@@ -185,21 +190,69 @@ def token(
     client_id: Annotated[str | None, Form()] = None,
     client_secret: Annotated[str | None, Form()] = None,
     code_verifier: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
 ):
-    """Standard OAuth token endpoint — RFC 6749 + RFC 7636 (PKCE)."""
-    if grant_type != "authorization_code":
-        raise HTTPException(status_code=400, detail={"error": "unsupported_grant_type"})
-    if not code or not redirect_uri or not client_id:
-        raise HTTPException(status_code=400, detail={"error": "invalid_request"})
+    """Standard OAuth token endpoint — RFC 6749 + RFC 7636 (PKCE).
 
+    Supports two grants:
+      authorization_code  — exchange a code (+ PKCE verifier) for tokens
+      refresh_token       — exchange a refresh token for a fresh token pair
+    """
+    if grant_type == "authorization_code":
+        return _grant_authorization_code(
+            code=code,
+            redirect_uri=redirect_uri,
+            client_id=client_id,
+            client_secret=client_secret,
+            code_verifier=code_verifier,
+        )
+    if grant_type == "refresh_token":
+        return _grant_refresh_token(
+            refresh_token=refresh_token,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+    raise HTTPException(status_code=400, detail={"error": "unsupported_grant_type"})
+
+
+def _require_client(client_id: str | None, client_secret: str | None) -> None:
+    """Validate the client exists and, if confidential, presents its secret."""
+    if not client_id:
+        raise HTTPException(status_code=400, detail={"error": "invalid_request"})
     client = load_client(client_id)
     if not client:
         raise HTTPException(status_code=400, detail={"error": "invalid_client"})
-
-    # Confidential clients must present a secret.
     if not client.get("is_public", True):
         if not client_secret or not verify_client_secret(client_id, client_secret):
             raise HTTPException(status_code=401, detail={"error": "invalid_client"})
+
+
+def _token_response(*, user_id: str, client_id: str, scope: str) -> dict:
+    """Mint a fresh access + (rotated) refresh token pair."""
+    access, expires_in = issue_access_token(user_id=user_id, client_id=client_id, scope=scope)
+    refresh = issue_refresh_token(user_id=user_id, client_id=client_id, scope=scope)
+    touch_client(client_id)
+    return {
+        "access_token": access,
+        "token_type": "Bearer",
+        "expires_in": expires_in,
+        "refresh_token": refresh,
+        "scope": scope,
+    }
+
+
+def _grant_authorization_code(
+    *,
+    code: str | None,
+    redirect_uri: str | None,
+    client_id: str | None,
+    client_secret: str | None,
+    code_verifier: str | None,
+) -> dict:
+    if not code or not redirect_uri or not client_id:
+        raise HTTPException(status_code=400, detail={"error": "invalid_request"})
+
+    _require_client(client_id, client_secret)
 
     try:
         payload = verify_authorization_code(
@@ -219,14 +272,28 @@ def token(
         if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
             raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
 
-    user_id = payload["sub"]
-    scope = payload.get("scope", "mcp")
-    access, expires_in = issue_access_token(user_id=user_id, client_id=client_id, scope=scope)
-    touch_client(client_id)
+    return _token_response(
+        user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
+    )
 
-    return {
-        "access_token": access,
-        "token_type": "Bearer",
-        "expires_in": expires_in,
-        "scope": scope,
-    }
+
+def _grant_refresh_token(
+    *,
+    refresh_token: str | None,
+    client_id: str | None,
+    client_secret: str | None,
+) -> dict:
+    if not refresh_token or not client_id:
+        raise HTTPException(status_code=400, detail={"error": "invalid_request"})
+
+    _require_client(client_id, client_secret)
+
+    try:
+        payload = verify_refresh_token(refresh_token, expected_client_id=client_id)
+    except ValueError as exc:
+        log.warning("refresh token rejected: %s", exc)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": str(exc)})
+
+    return _token_response(
+        user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
+    )

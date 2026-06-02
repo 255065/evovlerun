@@ -149,6 +149,59 @@ def decode_access_token(token: str) -> dict[str, Any] | None:
 
 
 # ---------------------------------------------------------------------------
+# Refresh token
+# ---------------------------------------------------------------------------
+# 30 days. Each refresh rotates the token (issues a fresh 30-day one), so an
+# actively-used connector effectively never has to re-authorize.
+REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30
+
+
+def issue_refresh_token(
+    *,
+    user_id: str,
+    client_id: str,
+    scope: str = "mcp",
+    ttl_seconds: int = REFRESH_TTL_SECONDS,
+) -> str:
+    """Mint an OAuth refresh token (JWT). Same signing key as access tokens,
+    distinguished by `typ`."""
+    settings = get_settings()
+    now = int(time.time())
+    payload = {
+        "iss": ISSUER,
+        "typ": "refresh_token",
+        "sub": user_id,
+        "aud": client_id,
+        "scope": scope,
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    return jwt.encode(payload, settings.oauth_state_secret, algorithm=ALGORITHM)
+
+
+def verify_refresh_token(token: str, *, expected_client_id: str) -> dict[str, Any]:
+    """Decode a refresh token JWT and check it was issued to this client.
+
+    Raises ValueError on any failure (mirrors `verify_authorization_code`).
+    """
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            token,
+            settings.oauth_state_secret,
+            algorithms=[ALGORITHM],
+            audience=expected_client_id,
+            issuer=ISSUER,
+        )
+    except JWTError as exc:
+        raise ValueError(f"invalid refresh token: {exc}") from exc
+
+    if payload.get("typ") != "refresh_token":
+        raise ValueError("wrong token type")
+    return payload
+
+
+# ---------------------------------------------------------------------------
 # PKCE
 # ---------------------------------------------------------------------------
 def verify_pkce(*, code_verifier: str, code_challenge: str, method: str) -> bool:
