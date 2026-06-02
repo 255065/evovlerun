@@ -7,7 +7,7 @@ const MAP_H = 200;
 
 /**
  * Strava-style latest-activity card. Reproduces the public activity layout
- * (athlete header, title, distance/pace/time, route trace, kudos) from the
+ * (athlete header, title, distance/pace/time, route trace) from the
  * fields Strava stores in raw_payload. Note: the "Local Legend" badge is a
  * Strava-app leaderboard feature with no API surface, so it isn't shown.
  */
@@ -83,13 +83,6 @@ export function LatestActivityCard({
         </div>
       )}
 
-      {/* Kudos footer */}
-      <div className="flex items-center gap-2 px-5 py-4 text-[13px] text-neutral-500">
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
-          <path d="M2 21h4V9H2v12zM23 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
-        </svg>
-        <span>{latest.kudos_count ?? 0} kudos</span>
-      </div>
     </div>
   );
 }

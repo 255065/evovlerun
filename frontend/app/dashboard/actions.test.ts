@@ -57,7 +57,6 @@ describe("loadActivitySummary", () => {
       raw_payload: {
         name: "Afternoon Run",
         map: { summary_polyline: "abc123" },
-        kudos_count: 2,
         achievement_count: 3,
         device_name: "Garmin Instinct 2S Solar",
         location_city: "Ballerup",
@@ -83,7 +82,6 @@ describe("loadActivitySummary", () => {
       notes: "Afternoon Run",
       name: "Afternoon Run",
       summary_polyline: "abc123",
-      kudos_count: 2,
       achievement_count: 3,
       device_name: "Garmin Instinct 2S Solar",
       location: "Ballerup, Denmark",

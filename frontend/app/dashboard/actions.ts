@@ -14,7 +14,6 @@ export type LatestActivity = {
   /** Strava summary fields lifted from raw_payload (may be absent for other sources). */
   name: string | null;
   summary_polyline: string | null;
-  kudos_count: number | null;
   achievement_count: number | null;
   device_name: string | null;
   location: string | null;
@@ -235,7 +234,6 @@ function normalizeLatest(row: Record<string, unknown>): LatestActivity {
     notes: str(row.notes),
     name: str(raw.name) ?? str(row.notes),
     summary_polyline: str(map.summary_polyline),
-    kudos_count: num(raw.kudos_count),
     achievement_count: num(raw.achievement_count),
     device_name: str(raw.device_name),
     location: locationParts.length ? locationParts.join(", ") : null,
