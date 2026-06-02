@@ -10,8 +10,8 @@ describe("LandingPage", () => {
     render(ui);
 
     expect(
-      screen.getByText(/Connect Strava to/i, { selector: "h1" }),
-    ).toBeInTheDocument();
+      screen.getByRole("heading", { level: 1 }),
+    ).toHaveTextContent(/understand your training with\s*ai/i);
 
     const getStarted = screen
       .getAllByRole("link", { name: /get started/i })

@@ -29,7 +29,7 @@ export function LatestActivityCard({
   const initial = (athleteName.trim()[0] ?? "A").toUpperCase();
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#1a1612]/10 bg-[#fbf8f1]">
+    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
       {/* Athlete header */}
       <div className="flex items-center gap-3 px-5 pt-5">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#fc4c02] text-[16px] font-semibold text-white">
@@ -37,7 +37,7 @@ export function LatestActivityCard({
         </div>
         <div className="min-w-0">
           <div className="text-[15px] font-semibold tracking-[-0.005em]">{athleteName}</div>
-          <div className="truncate text-[12.5px] text-[#7a7168]">{subtitle}</div>
+          <div className="truncate text-[12.5px] text-neutral-500">{subtitle}</div>
         </div>
       </div>
 
@@ -63,7 +63,7 @@ export function LatestActivityCard({
 
       {/* Route trace */}
       {routePath && (
-        <div className="mt-4 bg-[#f0e9dd]">
+        <div className="mt-4 bg-neutral-100">
           <svg
             viewBox={`0 0 ${MAP_W} ${MAP_H}`}
             className="h-auto w-full"
@@ -84,7 +84,7 @@ export function LatestActivityCard({
       )}
 
       {/* Kudos footer */}
-      <div className="flex items-center gap-2 px-5 py-4 text-[13px] text-[#6b6259]">
+      <div className="flex items-center gap-2 px-5 py-4 text-[13px] text-neutral-500">
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
           <path d="M2 21h4V9H2v12zM23 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" />
         </svg>
@@ -97,7 +97,7 @@ export function LatestActivityCard({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#8a7f74]">
+      <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-neutral-500">
         {label}
       </div>
       <div className="mt-0.5 text-[20px] font-semibold tracking-[-0.02em] leading-none">

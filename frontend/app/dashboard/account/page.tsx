@@ -48,7 +48,7 @@ export default async function AccountPage({
     <div className="mx-auto max-w-xl space-y-10 pb-16">
       <div>
         <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Account</h1>
-        <p className="mt-2 text-[15px] text-[#5f564d]">
+        <p className="mt-2 text-[15px] text-neutral-600">
           Update your profile and plan settings.
         </p>
       </div>
@@ -87,12 +87,12 @@ export default async function AccountPage({
           <StatusPill status={billing?.status ?? null} />
         </div>
         {periodEnd && (
-          <p className="mt-1.5 text-[13.5px] text-[#6b6259]">
+          <p className="mt-1.5 text-[13.5px] text-neutral-600">
             {isActive ? `Renews on ${periodEnd}. €9 per month.` : `Ended on ${periodEnd}.`}
           </p>
         )}
         {!periodEnd && !isActive && (
-          <p className="mt-1.5 text-[13.5px] text-[#6b6259]">
+          <p className="mt-1.5 text-[13.5px] text-neutral-600">
             €9 per month. Cancel anytime.
           </p>
         )}
@@ -102,7 +102,7 @@ export default async function AccountPage({
             <form action={openBillingPortalAction}>
               <button
                 type="submit"
-                className="inline-flex items-center rounded-full border border-[#1a1612]/12 bg-white/55 px-5 py-2 text-[13px] font-medium text-[#1a1612] transition hover:bg-white"
+                className="inline-flex items-center rounded-md border border-neutral-300 bg-white px-5 py-2 text-[13px] font-medium text-neutral-950 transition hover:bg-neutral-50"
               >
                 View billing
               </button>
@@ -111,7 +111,7 @@ export default async function AccountPage({
             <form action={startCheckoutAction}>
               <button
                 type="submit"
-                className="inline-flex items-center rounded-full bg-[#1a1612] px-5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#2b251f]"
+                className="inline-flex items-center rounded-md bg-neutral-950 px-5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-neutral-800"
               >
                 Start subscription
               </button>
@@ -127,7 +127,7 @@ export default async function AccountPage({
 
       {/* ─── Danger zone ───────────────────────────────────── */}
       <Section eyebrow="Danger zone" tone="danger">
-        <p className="text-[13.5px] text-[#4b423a]">
+        <p className="text-[13.5px] text-neutral-600">
           Permanently delete your account and all associated data. This cannot be undone.
         </p>
         <div className="mt-3">
@@ -147,14 +147,11 @@ function Section({
   tone?: "default" | "danger";
   children: React.ReactNode;
 }) {
-  const eyebrowCls =
-    tone === "danger"
-      ? "text-[#c0492a]"
-      : "text-[#dc6b3f]";
+  const eyebrowCls = tone === "danger" ? "text-red-600" : "text-neutral-500";
   return (
-    <section className="border-t border-[#1a1612]/10 pt-6">
+    <section className="border-t border-neutral-200 pt-6">
       <div
-        className={`mb-4 text-[12px] font-semibold uppercase tracking-[0.18em] ${eyebrowCls}`}
+        className={`mb-4 font-mono text-[11px] uppercase tracking-[0.18em] ${eyebrowCls}`}
       >
         {eyebrow}
       </div>

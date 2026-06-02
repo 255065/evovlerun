@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces, Inter } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,6 +21,11 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "EvolveRun — Simple AI endurance coach for Strava athletes",
   description:
@@ -35,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

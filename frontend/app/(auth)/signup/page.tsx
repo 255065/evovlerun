@@ -13,15 +13,15 @@ export default function SignupPage() {
   const [state, formAction, pending] = useActionState(signupAction, initialState);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-4 text-[#1a1612]">
+    <div className="flex min-h-screen items-center justify-center bg-[#fbfaf7] px-4 text-neutral-950">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-[15px] font-semibold">
           <Brandmark />
           EvolveRun
         </Link>
-        <div className="rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] p-8 shadow-xl shadow-[#1a1612]/8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
           <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Create your account</h1>
-          <p className="mt-2 text-[14.5px] text-[#5f564d]">Start your adaptive training journey.</p>
+          <p className="mt-2 text-[14.5px] text-neutral-600">Start your adaptive training journey.</p>
           <form action={formAction} className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full name</Label>
@@ -49,13 +49,13 @@ export default function SignupPage() {
             )}
             <Button
               type="submit"
-              className="w-full bg-[#1a1612] text-white hover:bg-[#2b251f]"
+              className="w-full bg-neutral-950 text-white hover:bg-neutral-800"
               disabled={pending}
             >
               {pending ? "Creating..." : "Create account"}
             </Button>
           </form>
-          <p className="mt-5 text-center text-[13.5px] text-[#6b6259]">
+          <p className="mt-5 text-center text-[13.5px] text-neutral-500">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-[#dc6b3f] hover:underline">
               Log in

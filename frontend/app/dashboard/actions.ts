@@ -2,32 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
-
-/** Get a Supabase access token for the current request — auth-gated by middleware. */
-async function getToken(): Promise<string | null> {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.access_token ?? null;
-}
-
-async function backendGet<T>(path: string): Promise<T | null> {
-  const token = await getToken();
-  if (!token) return null;
-  try {
-    const res = await fetch(`${BACKEND_URL}${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
-
 // ---- Types ---------------------------------------------------------------
 export type LatestActivity = {
   started_at: string;
@@ -101,8 +75,65 @@ export type Profile = {
 };
 
 // ---- Loaders -------------------------------------------------------------
+/**
+ * Current plan + upcoming sessions — read directly from Supabase (RLS).
+ *
+ * We read `planned_workouts` straight from the DB rather than hopping through
+ * the backend, the same way `loadActivitySummary` reads `workouts`. This is
+ * resilient: the plan renders whenever the user has upcoming sessions, even if
+ * their `training_plans` row isn't flagged `status='active'` (the backend's
+ * `/training/plan/current` requires that flag and otherwise reports no plan).
+ */
 export async function loadCurrentPlan(): Promise<CurrentPlan | null> {
-  return backendGet<CurrentPlan>("/training/plan/current");
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Pull from the start of the current week so today-is-mid-week still fills
+  // Monday onward; cover a few weeks ahead for the schedule + summaries.
+  const since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+  const { data: sessionRows } = await supabase
+    .from("planned_workouts")
+    .select(
+      "scheduled_date, session_type, sport, duration_min, distance_m, description, intensity_zones, rationale, status",
+    )
+    .eq("user_id", user.id)
+    .gte("scheduled_date", since)
+    .order("scheduled_date")
+    .limit(200);
+
+  const upcoming = (sessionRows ?? []) as PlannedSession[];
+
+  // Newest plan row (any status) for the header metadata + block focus.
+  const { data: planRow } = await supabase
+    .from("training_plans")
+    .select("id, race_type, race_date, target_time_seconds, philosophy, current_phase, weeks, plan_json")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (upcoming.length === 0 && !planRow) return { active: false };
+
+  const plan = (planRow ?? {}) as Record<string, unknown>;
+  const planJson = (plan.plan_json ?? {}) as Record<string, unknown>;
+  const str = (v: unknown): string | undefined => (typeof v === "string" && v ? v : undefined);
+  const num = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
+
+  return {
+    active: true,
+    plan_id: str(plan.id),
+    race_type: str(plan.race_type),
+    race_date: str(plan.race_date),
+    target_time_seconds: num(plan.target_time_seconds) ?? null,
+    philosophy: str(plan.philosophy),
+    current_phase: str(plan.current_phase),
+    weeks: num(plan.weeks),
+    blueprint: (planJson.blueprint as PlanBlueprint | undefined) ?? undefined,
+    next_14_days: upcoming,
+  };
 }
 
 /** Profile is read straight from Supabase (RLS-protected) — no backend hop needed. */

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { fmtRelative } from "@/lib/format";
 import {
   connectProviderAction,
   disconnectProviderAction,
@@ -71,7 +70,7 @@ export default async function ConnectionsPage({
     <div className="space-y-6">
       <div>
         <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Connections</h1>
-        <p className="mt-2 text-[15px] text-[#5f564d]">
+        <p className="mt-2 text-[15px] text-neutral-600">
           Connect your data sources. Tokens are encrypted with Fernet before they&apos;re stored.
         </p>
       </div>
@@ -92,57 +91,99 @@ export default async function ConnectionsPage({
         {PROVIDERS.map((p) => {
           const status = statusById[p.id] ?? null;
           const isConnected = status?.connected ?? false;
+          const lastSync = status?.last_sync_at ?? null;
 
           return (
-            <Card key={p.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{p.name}</CardTitle>
-                    <CardDescription className="mt-1">{p.desc}</CardDescription>
-                  </div>
-                  {isConnected && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
-                      Connected
-                    </span>
+            <div
+              key={p.id}
+              className={`rounded-2xl border border-neutral-200 bg-white p-4${
+                p.enabled ? " evr-card-hover" : ""
+              }`}
+            >
+              <div className="flex gap-4">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white text-[15px] font-semibold"
+                  style={{ background: p.id === "strava" ? "#fc4c02" : "#c9bfb2" }}
+                >
+                  {p.id === "strava" ? (
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor">
+                      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+                    </svg>
+                  ) : (
+                    p.name[0]
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {p.warning && <p className="text-xs text-amber-700">{p.warning}</p>}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[15px] font-semibold tracking-[-0.005em]">{p.name}</span>
+                    {!p.enabled ? (
+                      <span className="rounded-full bg-neutral-100 px-2.5 py-[3px] text-[11px] font-medium text-neutral-500">
+                        Coming soon
+                      </span>
+                    ) : isConnected ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
+                        <span className="evr-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Connected
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-neutral-100 px-2.5 py-[3px] text-[11px] font-medium text-neutral-500">
+                        Not connected
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-neutral-600">{p.desc}</p>
+                  {isConnected && (
+                    <p className="mt-1 text-[11.5px] text-neutral-500">
+                      {lastSync ? `Last synced ${fmtRelative(lastSync)}` : "Not synced yet"}
+                    </p>
+                  )}
+                  {p.warning && <p className="mt-2 text-[11.5px] text-amber-700">{p.warning}</p>}
+                </div>
+              </div>
 
-                {!p.enabled ? (
-                  <Button variant="outline" disabled>
-                    Coming soon
-                  </Button>
-                ) : isConnected ? (
-                  <div className="flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {!p.enabled ? null : isConnected ? (
+                  <>
                     <form action={syncProviderAction}>
                       <input type="hidden" name="provider" value={p.id} />
                       <input type="hidden" name="days" value="30" />
-                      <Button type="submit" variant="outline" size="sm">
+                      <button
+                        type="submit"
+                        className="inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
+                      >
                         Sync last 30 days
-                      </Button>
+                      </button>
                     </form>
                     <form action={disconnectProviderAction}>
                       <input type="hidden" name="provider" value={p.id} />
-                      <Button type="submit" variant="ghost" size="sm">
+                      <button
+                        type="submit"
+                        className="text-[13px] text-neutral-500 hover:text-neutral-950"
+                      >
                         Disconnect
-                      </Button>
+                      </button>
                     </form>
-                  </div>
+                  </>
                 ) : p.authMode === "credentials" ? (
-                  <Link href={`/dashboard/connections/${p.id}`}>
-                    <Button>Connect {p.name}</Button>
+                  <Link
+                    href={`/dashboard/connections/${p.id}`}
+                    className="inline-flex items-center justify-center rounded-md bg-neutral-950 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800"
+                  >
+                    Connect {p.name}
                   </Link>
                 ) : (
                   <form action={connectProviderAction}>
                     <input type="hidden" name="provider" value={p.id} />
-                    <Button type="submit">Connect {p.name}</Button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center justify-center rounded-md bg-neutral-950 px-4 py-2 text-[13px] font-medium text-white hover:bg-neutral-800"
+                    >
+                      Connect {p.name}
+                    </button>
                   </form>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>

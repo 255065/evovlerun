@@ -12,15 +12,15 @@ const initialState: AuthState = { error: null };
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f0e8] px-4 text-[#1a1612]">
+    <div className="flex min-h-screen items-center justify-center bg-[#fbfaf7] px-4 text-neutral-950">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-[15px] font-semibold">
           <Brandmark />
           EvolveRun
         </Link>
-        <div className="rounded-[24px] border border-[#1a1612]/10 bg-[#fbf8f1] p-8 shadow-xl shadow-[#1a1612]/8">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
           <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Welcome back</h1>
-          <p className="mt-2 text-[14.5px] text-[#5f564d]">Log in to see your coach.</p>
+          <p className="mt-2 text-[14.5px] text-neutral-600">Log in to see your coach.</p>
           {/* useSearchParams must live inside Suspense so Next.js can statically
               prerender the rest of the form without bailing out. */}
           <div className="mt-6">
@@ -28,7 +28,7 @@ export default function LoginPage() {
               <SearchParamLoginForm />
             </Suspense>
           </div>
-          <p className="mt-5 text-center text-[13.5px] text-[#6b6259]">
+          <p className="mt-5 text-center text-[13.5px] text-neutral-500">
             No account?{" "}
             <Link href="/signup" className="font-medium text-[#dc6b3f] hover:underline">
               Create one
@@ -81,7 +81,7 @@ function LoginForm({ fallbackRedirect }: { fallbackRedirect: string }) {
       )}
       <Button
         type="submit"
-        className="w-full bg-[#1a1612] text-white hover:bg-[#2b251f]"
+        className="w-full bg-neutral-950 text-white hover:bg-neutral-800"
         disabled={pending}
       >
         {pending ? "Logging in..." : "Log in"}

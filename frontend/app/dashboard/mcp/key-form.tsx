@@ -38,7 +38,7 @@ function GenerateForm({
             {pending ? "Generating…" : "Generate key"}
           </Button>
         </div>
-        <p className="text-xs text-[#7a7168]">
+        <p className="text-xs text-neutral-500">
           Give the key a name so you can recognize it later (e.g. which device or AI app uses it).
         </p>
       </div>
@@ -155,13 +155,13 @@ function AutoInstallPane({ result }: { result: NonNullable<CreateKeyState["newKe
           mimeType="application/x-sh"
           label="Download install script"
         />
-        <span className="text-xs text-[#7a7168]">…or copy-paste the whole script below into Terminal.</span>
+        <span className="text-xs text-neutral-500">…or copy-paste the whole script below into Terminal.</span>
       </div>
 
       <CodeBlock content={result.install.macos_install_script} language="bash" />
 
-      <div className="rounded-xl bg-[#1a1612]/5 p-3 text-xs text-[#6b6259]">
-        <p className="font-medium text-[#4b423a]">How it works:</p>
+      <div className="rounded-xl bg-neutral-100 p-3 text-xs text-neutral-600">
+        <p className="font-medium text-neutral-700">How it works:</p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
           <li>
             Verifies that <code className="font-mono text-[11px]">{result.install.mcp_server_path}</code> exists
@@ -183,7 +183,7 @@ function ManualPane({ result }: { result: NonNullable<CreateKeyState["newKey"]> 
       <ol className="list-decimal space-y-2 pl-4">
         <li>
           Open{" "}
-          <code className="rounded bg-[#1a1612]/8 px-1 py-0.5 font-mono text-xs">
+          <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-xs">
             {result.install.claude_config_file_path}
           </code>
         </li>
@@ -209,7 +209,7 @@ function ChatGPTPane({ apiKey }: { apiKey: string }) {
         </li>
         <li>
           <strong>Call the API directly</strong> — if you build your own integration, send your key as{" "}
-          <code className="rounded bg-[#1a1612]/8 px-1 py-0.5 font-mono text-xs">
+          <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-xs">
             Authorization: Bearer {apiKey.slice(0, 12)}…
           </code>{" "}
           against the backend&apos;s REST endpoints.
@@ -232,12 +232,12 @@ function ExamplesCard() {
     "Show me my CTL trend over 12 weeks.",
   ];
   return (
-    <div className="rounded-xl border border-[#1a1612]/10 bg-[#1a1612]/5 p-4">
+    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
       <p className="text-sm font-medium">Try asking Claude:</p>
-      <ul className="mt-2 space-y-1 text-sm text-[#4b423a]">
+      <ul className="mt-2 space-y-1 text-sm text-neutral-700">
         {samples.map((s, i) => (
           <li key={i} className="flex gap-2">
-            <span className="text-[#a89e92]">›</span>
+            <span className="text-neutral-400">›</span>
             <span className="italic">{s}</span>
           </li>
         ))}

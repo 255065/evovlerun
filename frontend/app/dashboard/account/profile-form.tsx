@@ -45,7 +45,7 @@ export function ProfileForm({
           name="email"
           value={email}
           readOnly
-          className={`${INPUT} bg-[#1a1612]/5 text-[#8a7f74]`}
+          className={`${INPUT} bg-neutral-100 text-neutral-500`}
         />
       </Field>
 
@@ -53,7 +53,7 @@ export function ProfileForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center rounded-full bg-[#1a1612] px-5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-[#2b251f] disabled:opacity-60"
+          className="inline-flex items-center rounded-md bg-neutral-950 px-5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-neutral-800 disabled:opacity-60"
         >
           {pending ? "Saving…" : "Save"}
         </button>
@@ -61,7 +61,7 @@ export function ProfileForm({
           <span className="text-[12.5px] text-emerald-700">Saved.</span>
         )}
         {state.error && (
-          <span className="text-[12.5px] text-[#c0492a]">{state.error}</span>
+          <span className="text-[12.5px] text-red-600">{state.error}</span>
         )}
       </div>
     </form>
@@ -71,11 +71,11 @@ export function ProfileForm({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[13px] text-[#4b423a]">{label}</span>
+      <span className="mb-1.5 block text-[13px] text-neutral-700">{label}</span>
       {children}
     </label>
   );
 }
 
 const INPUT =
-  "w-full rounded-xl border border-[#1a1612]/12 bg-white/70 px-3.5 py-2 text-[14px] text-[#1a1612] outline-none focus:border-[#dc6b3f] focus:ring-2 focus:ring-[#dc6b3f]/30";
+  "w-full rounded-md border border-neutral-300 bg-white px-3.5 py-2 text-[14px] text-neutral-950 outline-none focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200";

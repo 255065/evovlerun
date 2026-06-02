@@ -1,46 +1,61 @@
-import Link from "next/link";
-import { logoutAction } from "@/app/(auth)/actions";
-import { Brand } from "@/components/brand";
+"use client";
 
-type NavProps = {
-  email?: string | null;
-};
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { logoutAction } from "@/app/(auth)/actions";
 
 /**
- * Minimal in-app nav: brand left, four items center, sign-out right.
- * Anything not in this list (limiter, connections, MCP, profile) lives
- * inside the dashboard surfaces or settings — the top chrome should
- * stay short to keep the focus on training.
+ * In-app top nav — Lovable "DashNav" look: brand left, three items center
+ * (Dashboard / Training / Account), Sign out right. The active route is
+ * highlighted from the current pathname.
  */
-export function Nav({ email }: NavProps) {
+export function Nav() {
+  const pathname = usePathname();
+  const items: { href: string; label: string }[] = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/dashboard/training", label: "Training" },
+    { href: "/dashboard/account", label: "Account" },
+  ];
+
   return (
-    <header className="sticky top-0 z-40 border-b border-[#1a1612]/10 bg-[#f5f0e8]/88 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1100px] items-center justify-between px-5 sm:px-8">
-        <Brand href="/dashboard" />
-        <nav className="hidden items-center gap-7 text-[13.5px] text-[#5f564d] sm:flex">
-          <Link href="/dashboard" className="hover:text-[#1a1612]">
-            Dashboard
-          </Link>
-          <Link href="/dashboard/training" className="hover:text-[#1a1612]">
-            Training
-          </Link>
-          <Link href="/dashboard/account" className="hover:text-[#1a1612]">
-            Account
-          </Link>
+    <header className="border-b border-neutral-200/70">
+      <div className="mx-auto flex max-w-[1100px] items-center justify-between px-5 py-[18px] sm:px-8">
+        <Link href="/dashboard" className="flex items-center gap-2 text-[15px] font-semibold">
+          <Image
+            src="/evr-logo.png"
+            alt=""
+            width={24}
+            height={24}
+            className="object-contain mix-blend-multiply"
+          />
+          EvolveRun
+        </Link>
+        <nav className="hidden gap-8 text-[14px] text-neutral-700 md:flex">
+          {items.map((it) => {
+            const active =
+              it.href === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(it.href);
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className={active ? "font-medium text-neutral-950" : "hover:text-neutral-950"}
+              >
+                {it.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="flex items-center gap-4">
-          {email && (
-            <span className="hidden text-[12.5px] text-[#7a7168] md:inline">{email}</span>
-          )}
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-full border border-[#1a1612]/12 bg-white/55 px-4 py-2 text-[13px] font-medium text-[#1a1612] transition hover:bg-white"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className="rounded-md border border-neutral-300 bg-white px-3.5 py-1.5 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
     </header>
   );
