@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from typing import Annotated
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -267,6 +267,39 @@ def revoke(
             log.info("Revoked OAuth grant %s/%s", user_id, aud)
 
     return {"revoked": True}
+
+
+# ---------------------------------------------------------------------------
+# Deny  — user clicked "Cancel" on the consent screen
+# ---------------------------------------------------------------------------
+class DenyBody(BaseModel):
+    client_id: str
+    redirect_uri: str
+    state: str = ""
+
+
+@router.post("/deny")
+def deny(body: DenyBody):
+    """Validate the redirect_uri against the registered client, then return
+    the RFC 6749 §4.1.2.1 error redirect URL.
+
+    Doing this server-side prevents the consent page from being used as an
+    open-redirect (attacker crafts a /oauth/consent URL with a forged
+    redirect_uri; if user clicks Cancel they'd land on an attacker site).
+    """
+    client = load_client(body.client_id)
+    if not client or not redirect_uri_allowed(client, body.redirect_uri):
+        raise HTTPException(status_code=400, detail="redirect_uri not registered for this client")
+
+    parsed = urlparse(body.redirect_uri)
+    if parsed.scheme not in {"https", "http"}:
+        raise HTTPException(status_code=400, detail="invalid redirect_uri scheme")
+
+    params = {"error": "access_denied"}
+    if body.state:
+        params["state"] = body.state
+    sep = "&" if "?" in body.redirect_uri else "?"
+    return {"redirect_url": f"{body.redirect_uri}{sep}{urlencode(params)}"}
 
 
 def _require_client(client_id: str | None, client_secret: str | None) -> None:

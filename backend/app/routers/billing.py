@@ -219,6 +219,27 @@ async def stripe_webhook(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="bad signature") from exc
 
     log.info("Stripe webhook: %s (id=%s)", event["type"], event["id"])
+
+    # Idempotency: record the event id before processing. If the event was
+    # already processed (e.g. Stripe retry after a 5xx) the INSERT raises a
+    # unique-key violation, which we treat as "already done" and return 200
+    # so Stripe stops retrying. We don't log a warning — duplicates are normal.
+    supabase = get_supabase_admin()
+    try:
+        supabase.table("stripe_processed_events").insert({
+            "event_id": event["id"],
+            "event_type": event["type"],
+        }).execute()
+    except Exception as exc:
+        # Duplicate key → already processed. Any other DB error is unexpected
+        # but we still return 200 to avoid confusing Stripe's retry logic; the
+        # event will be re-queued if the response is non-2xx.
+        err_str = str(exc).lower()
+        if "duplicate" in err_str or "unique" in err_str or "23505" in err_str:
+            log.info("Stripe webhook duplicate, skipping: %s", event["id"])
+            return {"received": "ok"}
+        log.exception("Stripe event ledger insert failed for %s", event["id"])
+
     _handle_event(event)
     return {"received": "ok"}
 

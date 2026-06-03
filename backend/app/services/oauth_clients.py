@@ -11,6 +11,7 @@ restarts. Secrets are hashed (SHA-256) before storage, like the API keys.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 from datetime import datetime, timezone
 from typing import Any
@@ -81,7 +82,7 @@ def verify_client_secret(client_id: str, client_secret: str) -> bool:
     row = load_client(client_id)
     if not row or not row.get("client_secret_hash"):
         return False
-    return _hash(client_secret) == row["client_secret_hash"]
+    return hmac.compare_digest(_hash(client_secret), row["client_secret_hash"])
 
 
 def touch_client(client_id: str) -> None:

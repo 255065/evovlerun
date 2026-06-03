@@ -41,10 +41,27 @@ export async function approveOAuthAction(formData: FormData) {
 }
 
 export async function denyOAuthAction(formData: FormData) {
-  const redirectUri = String(formData.get("redirect_uri") ?? "");
-  const state = String(formData.get("state") ?? "");
-  const sep = redirectUri.includes("?") ? "&" : "?";
-  const params = new URLSearchParams({ error: "access_denied" });
-  if (state) params.set("state", state);
-  redirect(`${redirectUri}${sep}${params.toString()}`);
+  // Validate redirect_uri against the registered client server-side to prevent
+  // the consent page being used as an open-redirect.  The /oauth/deny endpoint
+  // returns the RFC 6749 §4.1.2.1 error URL only for known, registered URIs.
+  const body = {
+    client_id: String(formData.get("client_id") ?? ""),
+    redirect_uri: String(formData.get("redirect_uri") ?? ""),
+    state: String(formData.get("state") ?? ""),
+  };
+
+  const response = await fetch(`${BACKEND_URL}/oauth/deny`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    // Don't redirect anywhere unsafe — show a plain error page instead.
+    redirect("/");
+  }
+
+  const { redirect_url } = (await response.json()) as { redirect_url: string };
+  redirect(redirect_url);
 }
