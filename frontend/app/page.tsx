@@ -49,7 +49,6 @@ function Nav() {
         </Link>
         <nav className="hidden gap-6 text-[13.5px] text-neutral-600 md:flex">
           <a href="#how-it-works" className="hover:text-neutral-950">How it works</a>
-          <a href="#how-it-works" className="hover:text-neutral-950">Integrations</a>
           <a href="#pricing" className="hover:text-neutral-950">Pricing</a>
         </nav>
         <div className="flex items-center gap-2">
@@ -65,6 +64,23 @@ function Nav() {
           >
             Get started
           </Link>
+          {/* Mobile menu — <details> keeps this a server component (no JS state). */}
+          <details className="group relative md:hidden">
+            <summary
+              className="flex cursor-pointer list-none items-center rounded-md p-1.5 text-neutral-700 [&::-webkit-details-marker]:hidden"
+              aria-label="Open menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </svg>
+            </summary>
+            <nav className="absolute right-0 top-full z-20 mt-2 flex w-44 flex-col gap-1 rounded-lg border border-neutral-200 bg-white p-2 text-[13.5px] text-neutral-700 shadow-lg">
+              <a href="#how-it-works" className="rounded-md px-3 py-2 hover:bg-neutral-50">How it works</a>
+              <a href="#pricing" className="rounded-md px-3 py-2 hover:bg-neutral-50">Pricing</a>
+            </nav>
+          </details>
         </div>
       </div>
     </header>
