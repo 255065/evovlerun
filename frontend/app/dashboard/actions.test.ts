@@ -54,6 +54,7 @@ describe("loadActivitySummary", () => {
       avg_pace_s_per_km: 300,
       elevation_gain_m: 92,
       notes: "Afternoon Run",
+      source_id: "12345678",
       raw_payload: {
         name: "Afternoon Run",
         map: { summary_polyline: "abc123" },
@@ -85,6 +86,7 @@ describe("loadActivitySummary", () => {
       achievement_count: 3,
       device_name: "Garmin Instinct 2S Solar",
       location: "Ballerup, Denmark",
+      source_id: "12345678",
     });
     expect(result!.week.activities).toBe(3);
     expect(result!.week.km).toBeCloseTo(15, 5); // (10000 + 5000) / 1000

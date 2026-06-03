@@ -101,8 +101,8 @@ function Hero() {
       <div className="relative z-10 grid items-center gap-12 md:grid-cols-[1.05fr_1fr]">
         <div className="text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/90 py-1.5 pr-3.5 pl-1.5 text-[13px] text-neutral-600">
-            <span className="rounded-full bg-neutral-950 px-2.5 py-[3px] text-[11px] font-medium tracking-wide text-white">
-              Public Beta
+            <span className="rounded-full bg-emerald-600 px-2.5 py-[3px] text-[11px] font-medium tracking-wide text-white">
+              Now live
             </span>
             Connect Strava to ChatGPT &amp; Claude
           </div>
@@ -237,7 +237,7 @@ function Footer() {
           href="/signup"
           className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-6 py-3 text-[14.5px] font-medium text-white"
         >
-          Start free trial →
+          Get started →
         </Link>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12.5px] text-neutral-500">
           <Link href="/login" className="hover:text-neutral-950">Log in</Link>
