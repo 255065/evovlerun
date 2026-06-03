@@ -19,6 +19,21 @@ logging.basicConfig(
 )
 log = logging.getLogger("evolverun")
 
+# Error monitoring. No-op unless SENTRY_DSN is set, so dev/test are unaffected.
+# Initialise before the app is built so import-time and request errors are both
+# captured. The FastAPI integration auto-instruments routes and unhandled
+# exceptions; send_default_pii stays False so we never ship user data.
+if settings.sentry_dsn:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.env,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        send_default_pii=False,
+    )
+    log.info("Sentry error monitoring enabled (env=%s)", settings.env)
+
 # Build the MCP server once at import time. We mount its streamable-HTTP app
 # under /mcp and hook its task-group lifespan into ours below.
 _mcp = build_mcp_server(token_verifier=EvolveRunTokenVerifier())
