@@ -26,10 +26,33 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const BASE_URL = "https://evovlerun.vercel.app";
+
 export const metadata: Metadata = {
-  title: "EvolveRun — Simple AI endurance coach for Strava athletes",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "EvolveRun — Simple AI endurance coach for Strava athletes",
+    template: "%s · EvolveRun",
+  },
   description:
-    "Connect Strava. Get answers. EvolveRun lets Claude, ChatGPT, or Gemini answer real questions about your training using your real data.",
+    "Connect Strava. Get answers. EvolveRun lets Claude or ChatGPT answer real questions about your training using your real data.",
+  openGraph: {
+    type: "website",
+    url: BASE_URL,
+    siteName: "EvolveRun",
+    title: "EvolveRun — Simple AI endurance coach for Strava athletes",
+    description:
+      "Connect Strava. Get answers. EvolveRun lets Claude or ChatGPT answer real questions about your training using your real data.",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "EvolveRun" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "EvolveRun — AI coach for Strava athletes",
+    description:
+      "Ask Claude anything about your runs. EvolveRun connects your Strava data to Claude & ChatGPT.",
+    images: ["/og.png"],
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

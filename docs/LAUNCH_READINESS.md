@@ -30,8 +30,21 @@ security/legal gaps would bite on day one. All are fixable in a focused day or t
 | Error monitoring (Sentry) | ✅ env-guarded init; **ops:** set `SENTRY_DSN` in prod |
 | Hosted MCP onboarding copy | ✅ key install now uses `mcp-remote` (no clone) |
 
-**All 7 high-priority items are now addressed.** Remaining work is the
-medium/polish tier below.
+**All 7 high-priority items are now addressed.**
+
+**Medium/polish** (branch `medium-polish`)
+| Item | State |
+|---|---|
+| `replace_window` cross-plan delete | ✅ scoped to `plan_id` |
+| Stripe webhook idempotency | ✅ event ledger (migration 0009); **ops:** apply migration |
+| Client secret non-constant-time | ✅ `hmac.compare_digest` |
+| `/oauth/deny` open redirect | ✅ backend validates `redirect_uri`; consent page has Cancel button |
+| OG / Twitter / sitemap meta | ✅ full OpenGraph + `sitemap.ts` |
+| Dashboard loaders swallow errors | ✅ throw on Supabase error |
+| RLS — two `planned_workouts` reads miss `user_id` scope | remaining |
+| `verify_aud: False` on access tokens | remaining (low risk — single resource server) |
+| Strava brand assets ("Powered by Strava") | remaining |
+| Contradictory copy ("Public Beta" vs. "no free tier") | remaining |
 
 ## 🚫 Launch blockers (fix before taking a single payment)
 
