@@ -121,9 +121,18 @@ def get_period_summary(
     total_elev_m = sum((r.get("elevation_gain_m") or 0) for r in rows)
     longest_m = max((r.get("distance_m") or 0) for r in rows)
 
-    # Weighted-by-distance pace average where pace exists.
-    pace_pairs = [(r["avg_pace_s_per_km"], r.get("distance_m") or 0) for r in rows if r.get("avg_pace_s_per_km")]
-    avg_pace = (sum(p * d for p, d in pace_pairs) / sum(d for _, d in pace_pairs)) if pace_pairs else None
+    # Weighted-by-distance pace average where pace exists. Only pair pace with a
+    # POSITIVE distance — otherwise a window of pace-bearing rows that all have
+    # null/zero distance gives a zero denominator and crashes the tool.
+    pace_pairs = [
+        (r["avg_pace_s_per_km"], r["distance_m"])
+        for r in rows
+        if r.get("avg_pace_s_per_km") and (r.get("distance_m") or 0) > 0
+    ]
+    total_pace_distance = sum(d for _, d in pace_pairs)
+    avg_pace = (
+        sum(p * d for p, d in pace_pairs) / total_pace_distance if total_pace_distance else None
+    )
 
     # Plain mean for HR / cadence / power (weighted-by-duration would be
     # nicer but the gain is marginal vs. complexity).

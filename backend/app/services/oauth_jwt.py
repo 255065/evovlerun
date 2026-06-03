@@ -175,6 +175,9 @@ def issue_refresh_token(
         "scope": scope,
         "iat": now,
         "exp": now + ttl_seconds,
+        # Unique per token so rotation can mark the spent one consumed and
+        # detect reuse (see services/oauth_token_store.py).
+        "jti": secrets.token_urlsafe(16),
     }
     return jwt.encode(payload, settings.oauth_state_secret, algorithm=ALGORITHM)
 

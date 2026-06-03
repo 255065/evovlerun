@@ -27,6 +27,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
+from app.core.ratelimit import rate_limit
 from app.core.security import CurrentUser, get_current_user
 from app.services.oauth_clients import (
     load_client,
@@ -36,12 +37,18 @@ from app.services.oauth_clients import (
     verify_client_secret,
 )
 from app.services.oauth_jwt import (
+    decode_access_token,
     issue_access_token,
     issue_authorization_code,
     issue_refresh_token,
     verify_authorization_code,
     verify_pkce,
     verify_refresh_token,
+)
+from app.services.oauth_token_store import (
+    consume_jti,
+    is_grant_revoked,
+    revoke_grant,
 )
 
 log = logging.getLogger(__name__)
@@ -59,11 +66,14 @@ class RegisterBody(BaseModel):
     scope: str | None = None
 
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit("10/minute"))])
 def register(body: RegisterBody) -> dict:
     """Claude.ai POSTs here on first connector setup. No auth required —
     that's the point of DCR. We accept any caller, but only mint a client_id;
-    no actual access is granted until a user completes the consent flow."""
+    no actual access is granted until a user completes the consent flow.
+
+    Rate-limited per IP: unauthenticated DCR writes a client row per call, so
+    it's an obvious write-amplification target."""
     is_public = (body.token_endpoint_auth_method or "none") == "none"
     scopes = (body.scope or "mcp").split() if body.scope else ["mcp"]
     grant_types = body.grant_types or ["authorization_code"]
@@ -116,6 +126,11 @@ def authorize(
         raise HTTPException(status_code=400, detail="unsupported response_type")
     if not client_id or not redirect_uri:
         raise HTTPException(status_code=400, detail="missing client_id or redirect_uri")
+    # PKCE is mandatory (OAuth 2.1). Reject the request up front if the client
+    # didn't send an S256 challenge, so a code can never be minted without one
+    # — otherwise the exchange-time check can be downgrade-bypassed.
+    if not code_challenge or code_challenge_method != "S256":
+        raise HTTPException(status_code=400, detail="PKCE required: code_challenge with S256")
 
     client = load_client(client_id)
     if not client:
@@ -156,6 +171,9 @@ def approve(
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Issue an authorization code and tell the frontend where to redirect."""
+    if not body.code_challenge or (body.code_challenge_method or "S256") != "S256":
+        raise HTTPException(status_code=400, detail="PKCE required: code_challenge with S256")
+
     client = load_client(body.client_id)
     if not client:
         raise HTTPException(status_code=400, detail="unknown client_id")
@@ -182,7 +200,7 @@ def approve(
 # ---------------------------------------------------------------------------
 # Token  — exchange code for access token
 # ---------------------------------------------------------------------------
-@router.post("/token")
+@router.post("/token", dependencies=[Depends(rate_limit("30/minute"))])
 def token(
     grant_type: Annotated[str, Form()],
     code: Annotated[str | None, Form()] = None,
@@ -213,6 +231,42 @@ def token(
             client_secret=client_secret,
         )
     raise HTTPException(status_code=400, detail={"error": "unsupported_grant_type"})
+
+
+# ---------------------------------------------------------------------------
+# Revoke  — RFC 7009 token revocation (used on disconnect)
+# ---------------------------------------------------------------------------
+@router.post("/revoke")
+def revoke(
+    token: Annotated[str, Form()],
+    client_id: Annotated[str | None, Form()] = None,
+    client_secret: Annotated[str | None, Form()] = None,
+    token_type_hint: Annotated[str | None, Form()] = None,
+):
+    """Revoke a grant. We accept a refresh or access token, resolve its
+    (user, client), and revoke every token issued for that grant so far.
+
+    Per RFC 7009 the response is always 200 — we never reveal whether the
+    token was valid. Decoding failures are swallowed for the same reason.
+    """
+    _require_client(client_id, client_secret)
+
+    payload = None
+    try:
+        payload = verify_refresh_token(token, expected_client_id=client_id or "")
+    except ValueError:
+        decoded = decode_access_token(token)
+        if decoded is not None:
+            payload = decoded
+
+    if payload is not None:
+        user_id = payload.get("sub")
+        aud = payload.get("aud") or client_id
+        if user_id and aud:
+            revoke_grant(user_id, aud)
+            log.info("Revoked OAuth grant %s/%s", user_id, aud)
+
+    return {"revoked": True}
 
 
 def _require_client(client_id: str | None, client_secret: str | None) -> None:
@@ -262,15 +316,23 @@ def _grant_authorization_code(
         log.warning("auth code rejected: %s", exc)
         raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": str(exc)})
 
-    # PKCE check. Public clients MUST send a code_verifier matching the
-    # original challenge.
+    # PKCE check. Every code is minted with an S256 challenge (enforced at
+    # /authorize and /approve), so a code missing one — or carrying a non-S256
+    # method — is a downgrade attempt and is rejected outright.
     challenge = payload.get("code_challenge")
     method = payload.get("code_challenge_method") or "S256"
-    if challenge:
-        if not code_verifier:
-            raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code_verifier required"})
-        if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
-            raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
+    if not challenge or method != "S256":
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE required"})
+    if not code_verifier:
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code_verifier required"})
+    if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
+
+    # Single-use: an auth code may be redeemed exactly once (RFC 6749 §4.1.2).
+    # A second presentation of the same jti within its 60s TTL is a replay.
+    if not consume_jti(payload.get("jti"), typ="auth_code", user_id=payload["sub"], client_id=client_id):
+        log.warning("auth code replay rejected for client %s", client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code already used"})
 
     return _token_response(
         user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
@@ -294,6 +356,21 @@ def _grant_refresh_token(
         log.warning("refresh token rejected: %s", exc)
         raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": str(exc)})
 
+    user_id = payload["sub"]
+
+    # Reject tokens issued before the grant was revoked (disconnect / reuse).
+    if is_grant_revoked(user_id, client_id, int(payload.get("iat", 0))):
+        log.warning("refresh on revoked grant rejected for %s/%s", user_id, client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "grant revoked"})
+
+    # Rotation: spend this refresh token's jti. If it was already spent, the
+    # token is being reused after rotation — revoke the whole grant so the
+    # attacker AND the legitimate client must re-consent (RFC 6819 §5.2.2.3).
+    if not consume_jti(payload.get("jti"), typ="refresh_token", user_id=user_id, client_id=client_id):
+        log.warning("refresh token reuse detected for %s/%s — revoking grant", user_id, client_id)
+        revoke_grant(user_id, client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "refresh token reuse"})
+
     return _token_response(
-        user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
+        user_id=user_id, client_id=client_id, scope=payload.get("scope", "mcp")
     )

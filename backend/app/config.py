@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:3000"
 
+    # Error monitoring. When sentry_dsn is empty (default) Sentry is not
+    # initialised, so dev/test stay clean; set it in prod to get alerts.
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = 0.0
+
     # Supabase
     supabase_url: str = ""
     supabase_anon_key: str = ""

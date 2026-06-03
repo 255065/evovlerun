@@ -8,14 +8,15 @@ hash of the key so a database breach can't be turned into impersonation.
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app.config import get_settings
 from app.core.security import CurrentUser, get_current_user
 from app.core.supabase import get_supabase_admin
 
@@ -23,11 +24,11 @@ router = APIRouter(prefix="/mcp-keys", tags=["mcp-keys"])
 
 KEY_PREFIX = "evr_"  # so users can recognize them on sight
 
-# Repo-root path (parent of backend/). The MCP wrapper script lives here and
-# the install-snippet shipped to the frontend hardcodes this location. When
-# we move to a hosted MCP, this whole chunk goes away.
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-_RUN_MCP_PATH = _REPO_ROOT / "backend" / "run_mcp.sh"
+
+def _mcp_url() -> str:
+    """Public URL of the hosted MCP endpoint clients connect to."""
+    base = os.environ.get("MCP_PUBLIC_URL") or get_settings().backend_public_url
+    return base.rstrip("/") + "/mcp"
 
 
 class CreateKeyBody(BaseModel):
@@ -42,7 +43,7 @@ class InstallSnippets(BaseModel):
     """
     claude_desktop_config_snippet: str
     macos_install_script: str
-    mcp_server_path: str
+    mcp_url: str
     claude_config_file_path: str
 
 
@@ -58,38 +59,43 @@ class CreateKeyReply(BaseModel):
 def _build_install_snippets(api_key: str) -> InstallSnippets:
     """Render the pre-filled config + bash auto-installer for this API key.
 
-    The install script is intentionally chunky-but-readable: a user can paste
-    it into Terminal once and it patches Claude Desktop's config file (or
-    creates it from scratch) and restarts the app. No JSON editing.
+    Hosted MCP: the client connects to our remote server over HTTP via the
+    `mcp-remote` npm shim (no repo clone, works on any machine). The key is
+    passed as a Bearer header. The install script patches Claude Desktop's
+    config file and restarts the app — no JSON editing.
     """
-    run_mcp = str(_RUN_MCP_PATH)
+    url = _mcp_url()
     claude_cfg = "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
 
     config_snippet = (
         '{\n'
         '  "mcpServers": {\n'
         '    "evolverun": {\n'
-        f'      "command": "{run_mcp}",\n'
-        '      "env": {\n'
-        f'        "EVOLVERUN_API_KEY": "{api_key}"\n'
-        '      }\n'
+        '      "command": "npx",\n'
+        '      "args": [\n'
+        '        "-y",\n'
+        '        "mcp-remote",\n'
+        f'        "{url}",\n'
+        '        "--header",\n'
+        f'        "Authorization: Bearer {api_key}"\n'
+        '      ]\n'
         '    }\n'
         '  }\n'
         '}'
     )
 
     install_script = f"""#!/usr/bin/env bash
-# EvolveRun · Claude Desktop one-shot installer
-# Adds the evolverun MCP server to Claude Desktop's config and restarts the app.
+# EvolveRun · Claude Desktop one-shot installer (hosted MCP)
+# Connects Claude Desktop to the hosted EvolveRun MCP server via mcp-remote.
+# Requires Node.js (npx) — install from https://nodejs.org if it's missing.
 set -euo pipefail
 
 CFG="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
-RUN_MCP="{run_mcp}"
+URL="{url}"
 API_KEY="{api_key}"
 
-if [[ ! -f "$RUN_MCP" ]]; then
-  echo "❌ Wrapper script not found at $RUN_MCP"
-  echo "   Make sure you've cloned the evolverun repo to ~/dev/evolverun/"
+if ! command -v npx >/dev/null 2>&1; then
+  echo "❌ npx (Node.js) not found. Install Node from https://nodejs.org and re-run."
   exit 1
 fi
 
@@ -97,16 +103,16 @@ mkdir -p "$(dirname "$CFG")"
 [[ -f "$CFG" ]] || echo '{{}}' > "$CFG"
 
 # Patch the config in-place using Python — robust to existing servers.
-/usr/bin/python3 - "$CFG" "$RUN_MCP" "$API_KEY" <<'PY'
+/usr/bin/python3 - "$CFG" "$URL" "$API_KEY" <<'PY'
 import json, sys
-cfg_path, run_mcp, api_key = sys.argv[1:]
+cfg_path, url, api_key = sys.argv[1:]
 with open(cfg_path) as f:
     try: cfg = json.load(f)
     except Exception: cfg = {{}}
 cfg.setdefault("mcpServers", {{}})
 cfg["mcpServers"]["evolverun"] = {{
-    "command": run_mcp,
-    "env": {{"EVOLVERUN_API_KEY": api_key}},
+    "command": "npx",
+    "args": ["-y", "mcp-remote", url, "--header", f"Authorization: Bearer {{api_key}}"],
 }}
 with open(cfg_path, "w") as f:
     json.dump(cfg, f, indent=2)
@@ -122,13 +128,13 @@ fi
 open -a Claude
 echo ""
 echo "🎉 EvolveRun connected. Open Claude Desktop and try:"
-echo "    \\"Hvad var min sidste lange løbetur?\\""
+echo "    \\"What was my last long run?\\""
 """
 
     return InstallSnippets(
         claude_desktop_config_snippet=config_snippet,
         macos_install_script=install_script,
-        mcp_server_path=run_mcp,
+        mcp_url=url,
         claude_config_file_path=claude_cfg,
     )
 
