@@ -226,6 +226,8 @@ function Footer() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12.5px] text-neutral-500">
           <Link href="/login" className="hover:text-neutral-950">Log in</Link>
           <a href="#how-it-works" className="hover:text-neutral-950">How it works</a>
+          <Link href="/privacy" className="hover:text-neutral-950">Privacy</Link>
+          <Link href="/terms" className="hover:text-neutral-950">Terms</Link>
           <a
             href="https://github.com/255065/evovlerun"
             target="_blank"
