@@ -36,12 +36,18 @@ from app.services.oauth_clients import (
     verify_client_secret,
 )
 from app.services.oauth_jwt import (
+    decode_access_token,
     issue_access_token,
     issue_authorization_code,
     issue_refresh_token,
     verify_authorization_code,
     verify_pkce,
     verify_refresh_token,
+)
+from app.services.oauth_token_store import (
+    consume_jti,
+    is_grant_revoked,
+    revoke_grant,
 )
 
 log = logging.getLogger(__name__)
@@ -223,6 +229,42 @@ def token(
     raise HTTPException(status_code=400, detail={"error": "unsupported_grant_type"})
 
 
+# ---------------------------------------------------------------------------
+# Revoke  — RFC 7009 token revocation (used on disconnect)
+# ---------------------------------------------------------------------------
+@router.post("/revoke")
+def revoke(
+    token: Annotated[str, Form()],
+    client_id: Annotated[str | None, Form()] = None,
+    client_secret: Annotated[str | None, Form()] = None,
+    token_type_hint: Annotated[str | None, Form()] = None,
+):
+    """Revoke a grant. We accept a refresh or access token, resolve its
+    (user, client), and revoke every token issued for that grant so far.
+
+    Per RFC 7009 the response is always 200 — we never reveal whether the
+    token was valid. Decoding failures are swallowed for the same reason.
+    """
+    _require_client(client_id, client_secret)
+
+    payload = None
+    try:
+        payload = verify_refresh_token(token, expected_client_id=client_id or "")
+    except ValueError:
+        decoded = decode_access_token(token)
+        if decoded is not None:
+            payload = decoded
+
+    if payload is not None:
+        user_id = payload.get("sub")
+        aud = payload.get("aud") or client_id
+        if user_id and aud:
+            revoke_grant(user_id, aud)
+            log.info("Revoked OAuth grant %s/%s", user_id, aud)
+
+    return {"revoked": True}
+
+
 def _require_client(client_id: str | None, client_secret: str | None) -> None:
     """Validate the client exists and, if confidential, presents its secret."""
     if not client_id:
@@ -282,6 +324,12 @@ def _grant_authorization_code(
     if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
         raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
 
+    # Single-use: an auth code may be redeemed exactly once (RFC 6749 §4.1.2).
+    # A second presentation of the same jti within its 60s TTL is a replay.
+    if not consume_jti(payload.get("jti"), typ="auth_code", user_id=payload["sub"], client_id=client_id):
+        log.warning("auth code replay rejected for client %s", client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code already used"})
+
     return _token_response(
         user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
     )
@@ -304,6 +352,21 @@ def _grant_refresh_token(
         log.warning("refresh token rejected: %s", exc)
         raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": str(exc)})
 
+    user_id = payload["sub"]
+
+    # Reject tokens issued before the grant was revoked (disconnect / reuse).
+    if is_grant_revoked(user_id, client_id, int(payload.get("iat", 0))):
+        log.warning("refresh on revoked grant rejected for %s/%s", user_id, client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "grant revoked"})
+
+    # Rotation: spend this refresh token's jti. If it was already spent, the
+    # token is being reused after rotation — revoke the whole grant so the
+    # attacker AND the legitimate client must re-consent (RFC 6819 §5.2.2.3).
+    if not consume_jti(payload.get("jti"), typ="refresh_token", user_id=user_id, client_id=client_id):
+        log.warning("refresh token reuse detected for %s/%s — revoking grant", user_id, client_id)
+        revoke_grant(user_id, client_id)
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "refresh token reuse"})
+
     return _token_response(
-        user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
+        user_id=user_id, client_id=client_id, scope=payload.get("scope", "mcp")
     )
