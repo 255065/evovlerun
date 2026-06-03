@@ -71,7 +71,15 @@ function LoginForm({ fallbackRedirect }: { fallbackRedirect: string }) {
         <Input id="email" name="email" type="email" required autoComplete="email" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Password</Label>
+          <Link
+            href="/forgot-password"
+            className="text-[13px] font-medium text-[#dc6b3f] hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" required autoComplete="current-password" />
       </div>
       {state.error && (
