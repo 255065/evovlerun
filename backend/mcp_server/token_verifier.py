@@ -19,8 +19,13 @@ import logging
 
 from mcp.server.auth.provider import AccessToken, TokenVerifier
 
+from app.config import get_settings
 from app.services.oauth_jwt import decode_access_token
-from mcp_server.auth import InvalidApiKeyError, resolve_user_id
+from mcp_server.auth import (
+    InvalidApiKeyError,
+    resolve_user_id,
+    user_has_active_subscription,
+)
 
 log = logging.getLogger(__name__)
 
@@ -39,16 +44,31 @@ class EvolveRunTokenVerifier(TokenVerifier):
             except InvalidApiKeyError as exc:
                 log.debug("MCP auth rejected (api key): %s", exc)
                 return None
-            return AccessToken(token=token, client_id=user_id, scopes=["mcp"], expires_at=None)
+            scopes = ["mcp"]
+            expires_at = None
+        else:
+            payload = decode_access_token(token)
+            if payload is None:
+                log.debug("MCP auth rejected: token is neither valid API key nor JWT")
+                return None
+            user_id = payload["sub"]
+            scopes = (payload.get("scope") or "mcp").split()
+            expires_at = int(payload["exp"]) if payload.get("exp") else None
 
-        payload = decode_access_token(token)
-        if payload is None:
-            log.debug("MCP auth rejected: token is neither valid API key nor JWT")
+        # The MCP connector IS the paid product, so the subscription check has
+        # to live here (the web paywall in middleware.ts only guards /dashboard,
+        # not this API). Gated by ENFORCE_SUBSCRIPTION so dev/self-use can opt
+        # out; MUST be true in production.
+        if not self._subscription_ok(user_id):
             return None
-        scope = (payload.get("scope") or "mcp").split()
-        return AccessToken(
-            token=token,
-            client_id=payload["sub"],          # user_id
-            scopes=scope,
-            expires_at=int(payload["exp"]) if payload.get("exp") else None,
-        )
+
+        return AccessToken(token=token, client_id=user_id, scopes=scopes, expires_at=expires_at)
+
+    @staticmethod
+    def _subscription_ok(user_id: str) -> bool:
+        if not get_settings().enforce_subscription:
+            return True
+        if user_has_active_subscription(user_id):
+            return True
+        log.info("MCP auth rejected: user %s has no active subscription", user_id)
+        return False

@@ -53,3 +53,34 @@ def resolve_user_id(api_key: str) -> str:
         log.warning("Failed to update last_used_at for key %s", row["id"], exc_info=True)
 
     return row["user_id"]
+
+
+# Subscription states that grant access to the MCP product surface. Mirrors
+# `has_subscription` in app/routers/billing.py so the API and the web paywall
+# agree on what "subscribed" means.
+ACTIVE_SUBSCRIPTION_STATES = {"active", "trialing"}
+
+
+def user_has_active_subscription(user_id: str) -> bool:
+    """Return True if the user's profile has an active/trialing subscription.
+
+    Used to gate the MCP product surface (the connector IS the paid product).
+    A missing profile, a Supabase error, or a null/other status all count as
+    NOT subscribed — we fail closed so a lookup failure never hands out free
+    access.
+    """
+    try:
+        result = (
+            get_supabase_admin()
+            .table("profiles")
+            .select("subscription_status")
+            .eq("id", user_id)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        log.warning("Subscription lookup failed for user %s", user_id, exc_info=True)
+        return False
+    row = result.data if result else None
+    status = (row or {}).get("subscription_status")
+    return status in ACTIVE_SUBSCRIPTION_STATES
