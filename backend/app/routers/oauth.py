@@ -116,6 +116,11 @@ def authorize(
         raise HTTPException(status_code=400, detail="unsupported response_type")
     if not client_id or not redirect_uri:
         raise HTTPException(status_code=400, detail="missing client_id or redirect_uri")
+    # PKCE is mandatory (OAuth 2.1). Reject the request up front if the client
+    # didn't send an S256 challenge, so a code can never be minted without one
+    # — otherwise the exchange-time check can be downgrade-bypassed.
+    if not code_challenge or code_challenge_method != "S256":
+        raise HTTPException(status_code=400, detail="PKCE required: code_challenge with S256")
 
     client = load_client(client_id)
     if not client:
@@ -156,6 +161,9 @@ def approve(
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Issue an authorization code and tell the frontend where to redirect."""
+    if not body.code_challenge or (body.code_challenge_method or "S256") != "S256":
+        raise HTTPException(status_code=400, detail="PKCE required: code_challenge with S256")
+
     client = load_client(body.client_id)
     if not client:
         raise HTTPException(status_code=400, detail="unknown client_id")
@@ -262,15 +270,17 @@ def _grant_authorization_code(
         log.warning("auth code rejected: %s", exc)
         raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": str(exc)})
 
-    # PKCE check. Public clients MUST send a code_verifier matching the
-    # original challenge.
+    # PKCE check. Every code is minted with an S256 challenge (enforced at
+    # /authorize and /approve), so a code missing one — or carrying a non-S256
+    # method — is a downgrade attempt and is rejected outright.
     challenge = payload.get("code_challenge")
     method = payload.get("code_challenge_method") or "S256"
-    if challenge:
-        if not code_verifier:
-            raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code_verifier required"})
-        if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
-            raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
+    if not challenge or method != "S256":
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE required"})
+    if not code_verifier:
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "code_verifier required"})
+    if not verify_pkce(code_verifier=code_verifier, code_challenge=challenge, method=method):
+        raise HTTPException(status_code=400, detail={"error": "invalid_grant", "detail": "PKCE check failed"})
 
     return _token_response(
         user_id=payload["sub"], client_id=client_id, scope=payload.get("scope", "mcp")
