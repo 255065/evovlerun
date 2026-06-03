@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from app.config import Settings, get_settings
+from app.core.ratelimit import rate_limit
 from app.core.security import CurrentUser, get_current_user
 from app.core.supabase import get_supabase_admin
 
@@ -184,7 +185,11 @@ def billing_status(
 # ---- Webhook ------------------------------------------------------------
 
 
-@router.post("/webhook", include_in_schema=False)
+@router.post(
+    "/webhook",
+    include_in_schema=False,
+    dependencies=[Depends(rate_limit("100/minute"))],
+)
 async def stripe_webhook(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],

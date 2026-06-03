@@ -27,6 +27,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.config import Settings, get_settings
+from app.core.ratelimit import rate_limit
 from app.core.security import CurrentUser, get_current_user
 from app.services.oauth_clients import (
     load_client,
@@ -65,11 +66,14 @@ class RegisterBody(BaseModel):
     scope: str | None = None
 
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit("10/minute"))])
 def register(body: RegisterBody) -> dict:
     """Claude.ai POSTs here on first connector setup. No auth required —
     that's the point of DCR. We accept any caller, but only mint a client_id;
-    no actual access is granted until a user completes the consent flow."""
+    no actual access is granted until a user completes the consent flow.
+
+    Rate-limited per IP: unauthenticated DCR writes a client row per call, so
+    it's an obvious write-amplification target."""
     is_public = (body.token_endpoint_auth_method or "none") == "none"
     scopes = (body.scope or "mcp").split() if body.scope else ["mcp"]
     grant_types = body.grant_types or ["authorization_code"]
@@ -196,7 +200,7 @@ def approve(
 # ---------------------------------------------------------------------------
 # Token  — exchange code for access token
 # ---------------------------------------------------------------------------
-@router.post("/token")
+@router.post("/token", dependencies=[Depends(rate_limit("30/minute"))])
 def token(
     grant_type: Annotated[str, Form()],
     code: Annotated[str | None, Form()] = None,

@@ -15,6 +15,9 @@ garminconnect>=0.2.31
 # client code, not here, so library upgrades don't change wire format.
 stripe>=11.0,<13
 
+# Rate limiting for public endpoints (in-memory moving-window, per-IP).
+limits>=3,<6
+
 # MCP server. Pinned tightly: newer mcp versions (1.20+) bump starlette to
 # 1.0 which is incompatible with FastAPI < 0.120 — see commit message.
 mcp==1.13.1
