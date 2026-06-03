@@ -12,11 +12,23 @@ security/legal gaps would bite on day one. All are fixable in a focused day or t
 
 ## Progress (branch `launch-prep`)
 
+**Blockers**
 | Blocker | State |
 |---|---|
 | #1 Subscription gating | ✅ code + tests · **ops:** set `ENFORCE_SUBSCRIPTION=true` in prod |
 | #2 Strava webhook auth | ✅ code + tests · **ops:** re-register Strava callback URL with `?token=<secret>` |
 | #3 Privacy/Terms pages | ✅ scaffolded at `/privacy` + `/terms` · **action:** fill the `[BRACKETED]` placeholders + have reviewed |
+
+**High priority**
+| Item | State |
+|---|---|
+| PKCE downgrade bypass | ✅ S256 mandatory; `plain` dropped; tests |
+| `get_period_summary` crash | ✅ zero-distance guard; tests |
+| Auth-code replay + refresh revocation | ✅ migration 0008 + single-use/reuse-detection + `/oauth/revoke`; **ops:** apply migration |
+| Rate limiting | ✅ per-IP limits on register/token/webhook; tests |
+| Password-reset flow | ✅ `/forgot-password` + `/reset-password`; **ops:** configure Supabase SMTP |
+| Error monitoring (Sentry) | ⬜ not started (needs your Sentry DSN) |
+| Hosted MCP onboarding copy | ⬜ not started |
 
 ## 🚫 Launch blockers (fix before taking a single payment)
 
