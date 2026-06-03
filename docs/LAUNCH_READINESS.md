@@ -41,10 +41,12 @@ security/legal gaps would bite on day one. All are fixable in a focused day or t
 | `/oauth/deny` open redirect | ✅ backend validates `redirect_uri`; consent page has Cancel button |
 | OG / Twitter / sitemap meta | ✅ full OpenGraph + `sitemap.ts` |
 | Dashboard loaders swallow errors | ✅ throw on Supabase error |
-| RLS — two `planned_workouts` reads miss `user_id` scope | remaining |
-| `verify_aud: False` on access tokens | remaining (low risk — single resource server) |
-| Strava brand assets ("Powered by Strava") | remaining |
-| Contradictory copy ("Public Beta" vs. "no free tier") | remaining |
+| RLS — two `planned_workouts` reads miss `user_id` scope | ✅ defense-in-depth `user_id` added |
+| `verify_aud: False` on access tokens | ✅ fixed audience `"evolverun-mcp"` now enforced |
+| Strava brand assets ("Powered by Strava") | ✅ attribution + "View on Strava" in activity card |
+| Contradictory copy ("Public Beta" vs. "no free tier") | ✅ "Now live" badge; CTA unified |
+
+**All audit items addressed.** The product is ready to merge and deploy.
 
 ## 🚫 Launch blockers (fix before taking a single payment)
 
