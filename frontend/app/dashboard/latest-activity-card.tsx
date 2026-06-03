@@ -83,7 +83,56 @@ export function LatestActivityCard({
         </div>
       )}
 
+      {/* Strava attribution — required by Strava brand guidelines */}
+      <div className="flex items-center justify-between px-5 py-3 text-[12px] text-neutral-400">
+        <a
+          href="https://www.strava.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 hover:text-[#fc4c02]"
+          aria-label="Powered by Strava"
+        >
+          <StravaWordmark />
+          <span>Powered by Strava</span>
+        </a>
+        {latest.source_id && (
+          <a
+            href={`https://www.strava.com/activities/${latest.source_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#fc4c02]"
+          >
+            View on Strava →
+          </a>
+        )}
+      </div>
     </div>
+  );
+}
+
+/** Strava logo wordmark (SVG inline — no image request, no CORS). */
+function StravaWordmark() {
+  return (
+    <svg
+      width="52"
+      height="14"
+      viewBox="0 0 52 14"
+      fill="currentColor"
+      aria-hidden="true"
+      className="text-[#fc4c02]"
+    >
+      {/* Simplified "STRAVA" text path matching brand colour */}
+      <text
+        x="0"
+        y="11"
+        fontFamily="Arial, sans-serif"
+        fontWeight="bold"
+        fontSize="12"
+        letterSpacing="0.5"
+      >
+        STRAVA
+      </text>
+    </svg>
   );
 }
 

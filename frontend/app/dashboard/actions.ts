@@ -17,6 +17,8 @@ export type LatestActivity = {
   achievement_count: number | null;
   device_name: string | null;
   location: string | null;
+  /** source_id is the Strava activity ID — used to build "View on Strava" links. */
+  source_id: string | null;
 };
 
 export type ActivitySummary = {
@@ -187,7 +189,7 @@ export async function loadActivitySummary(): Promise<ActivitySummary> {
   const { data: latestRow, error: latestErr } = await supabase
     .from("workouts")
     .select(
-      "started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km, elevation_gain_m, notes, raw_payload",
+      "started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km, elevation_gain_m, notes, source_id, raw_payload",
     )
     .eq("user_id", user.id)
     .order("started_at", { ascending: false })
@@ -241,6 +243,7 @@ function normalizeLatest(row: Record<string, unknown>): LatestActivity {
     achievement_count: num(raw.achievement_count),
     device_name: str(raw.device_name),
     location: locationParts.length ? locationParts.join(", ") : null,
+    source_id: str(row.source_id),
   };
 }
 

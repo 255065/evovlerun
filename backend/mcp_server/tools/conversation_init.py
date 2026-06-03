@@ -245,6 +245,7 @@ def _athlete_snapshot(user_id: str) -> str:
             upcoming = (
                 client.table("planned_workouts")
                 .select("scheduled_date, session_type, duration_min, distance_m, description")
+                .eq("user_id", user_id)
                 .eq("plan_id", plan["id"])
                 .gte("scheduled_date", today_iso)
                 .order("scheduled_date")
