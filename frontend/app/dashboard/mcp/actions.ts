@@ -28,7 +28,7 @@ export type KeySummary = {
 export type InstallSnippets = {
   claude_desktop_config_snippet: string;
   macos_install_script: string;
-  mcp_server_path: string;
+  mcp_url: string;
   claude_config_file_path: string;
 };
 

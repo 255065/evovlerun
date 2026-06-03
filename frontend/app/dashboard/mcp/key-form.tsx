@@ -164,7 +164,9 @@ function AutoInstallPane({ result }: { result: NonNullable<CreateKeyState["newKe
         <p className="font-medium text-neutral-700">How it works:</p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
           <li>
-            Verifies that <code className="font-mono text-[11px]">{result.install.mcp_server_path}</code> exists
+            Connects Claude Desktop to{" "}
+            <code className="font-mono text-[11px]">{result.install.mcp_url}</code> via{" "}
+            <code className="font-mono text-[11px]">mcp-remote</code> (needs Node.js — no repo to clone)
           </li>
           <li>
             Adds <code className="font-mono text-[11px]">evolverun</code> to Claude&apos;s MCP config (without touching
