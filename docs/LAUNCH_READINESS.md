@@ -27,8 +27,11 @@ security/legal gaps would bite on day one. All are fixable in a focused day or t
 | Auth-code replay + refresh revocation | ✅ migration 0008 + single-use/reuse-detection + `/oauth/revoke`; **ops:** apply migration |
 | Rate limiting | ✅ per-IP limits on register/token/webhook; tests |
 | Password-reset flow | ✅ `/forgot-password` + `/reset-password`; **ops:** configure Supabase SMTP |
-| Error monitoring (Sentry) | ⬜ not started (needs your Sentry DSN) |
-| Hosted MCP onboarding copy | ⬜ not started |
+| Error monitoring (Sentry) | ✅ env-guarded init; **ops:** set `SENTRY_DSN` in prod |
+| Hosted MCP onboarding copy | ✅ key install now uses `mcp-remote` (no clone) |
+
+**All 7 high-priority items are now addressed.** Remaining work is the
+medium/polish tier below.
 
 ## 🚫 Launch blockers (fix before taking a single payment)
 
