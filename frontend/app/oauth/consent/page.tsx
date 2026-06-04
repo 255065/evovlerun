@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { approveOAuthAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { approveOAuthAction, denyOAuthAction } from "./actions";
 import { ApproveButton } from "./approve-button";
 
 type SearchParams = {
@@ -40,7 +41,9 @@ export default async function ConsentPage({
     );
   }
 
-  const clientName = params.client_name || params.client_id;
+  // Use the client_name from the URL (set by the backend's /oauth/authorize from
+  // the registered DB value), but cap length so a long name can't overflow the UI.
+  const clientName = (params.client_name || params.client_id || "Unknown application").slice(0, 80);
   const scopes = (params.scope || "mcp").split(/\s+/);
 
   return (
@@ -67,19 +70,34 @@ export default async function ConsentPage({
             </p>
           </div>
 
-          <form action={approveOAuthAction} className="flex gap-3 pt-2">
-            <input type="hidden" name="client_id" value={params.client_id} />
-            <input type="hidden" name="redirect_uri" value={params.redirect_uri} />
-            <input type="hidden" name="state" value={params.state || ""} />
-            <input type="hidden" name="scope" value={params.scope || "mcp"} />
-            <input type="hidden" name="code_challenge" value={params.code_challenge || ""} />
-            <input
-              type="hidden"
-              name="code_challenge_method"
-              value={params.code_challenge_method || "S256"}
-            />
-            <ApproveButton />
-          </form>
+          <p className="text-xs text-neutral-500">
+            Third-party application · ID:{" "}
+            <code className="font-mono">{params.client_id}</code>
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <form action={approveOAuthAction} className="flex-1">
+              <input type="hidden" name="client_id" value={params.client_id} />
+              <input type="hidden" name="redirect_uri" value={params.redirect_uri} />
+              <input type="hidden" name="state" value={params.state || ""} />
+              <input type="hidden" name="scope" value={params.scope || "mcp"} />
+              <input type="hidden" name="code_challenge" value={params.code_challenge || ""} />
+              <input
+                type="hidden"
+                name="code_challenge_method"
+                value={params.code_challenge_method || "S256"}
+              />
+              <ApproveButton />
+            </form>
+            <form action={denyOAuthAction}>
+              <input type="hidden" name="client_id" value={params.client_id} />
+              <input type="hidden" name="redirect_uri" value={params.redirect_uri} />
+              <input type="hidden" name="state" value={params.state || ""} />
+              <Button type="submit" variant="outline">
+                Cancel
+              </Button>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>

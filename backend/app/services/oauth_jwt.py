@@ -103,6 +103,13 @@ def verify_authorization_code(
 # ---------------------------------------------------------------------------
 # Access token
 # ---------------------------------------------------------------------------
+# Fixed audience for access tokens — the resource server (MCP) verifies this.
+# Auth codes and refresh tokens still use client_id as audience (only that
+# specific client can redeem them). Access tokens are for the resource server,
+# not the client, so the audience is the server identity string.
+ACCESS_TOKEN_AUDIENCE = ISSUER  # "evolverun-mcp"
+
+
 def issue_access_token(
     *,
     user_id: str,
@@ -117,7 +124,11 @@ def issue_access_token(
         "iss": ISSUER,
         "typ": "access_token",
         "sub": user_id,
-        "aud": client_id,
+        # Audience is the resource server, not the client (RFC 7519 §4.1.3).
+        # The client_id is preserved in a separate claim so the resource server
+        # can still see which app the token was issued to.
+        "aud": ACCESS_TOKEN_AUDIENCE,
+        "client_id": client_id,
         "scope": scope,
         "iat": now,
         "exp": now + ttl_seconds,
@@ -126,20 +137,15 @@ def issue_access_token(
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
-    """Verify an access token JWT. Returns claims or None if invalid.
-
-    Skip audience check here — the resource server isn't trying to validate
-    *which* client issued the token, only that we issued it and it hasn't
-    expired. (Future hardening: pin to a known client list.)
-    """
+    """Verify an access token JWT. Returns claims or None if invalid."""
     settings = get_settings()
     try:
         payload = jwt.decode(
             token,
             settings.oauth_state_secret,
             algorithms=[ALGORITHM],
+            audience=ACCESS_TOKEN_AUDIENCE,
             issuer=ISSUER,
-            options={"verify_aud": False},
         )
     except JWTError:
         return None
@@ -175,6 +181,9 @@ def issue_refresh_token(
         "scope": scope,
         "iat": now,
         "exp": now + ttl_seconds,
+        # Unique per token so rotation can mark the spent one consumed and
+        # detect reuse (see services/oauth_token_store.py).
+        "jti": secrets.token_urlsafe(16),
     }
     return jwt.encode(payload, settings.oauth_state_secret, algorithm=ALGORITHM)
 

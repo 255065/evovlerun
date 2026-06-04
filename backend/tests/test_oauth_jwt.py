@@ -59,6 +59,10 @@ def public_client(monkeypatch):
         oauth_router, "load_client", lambda cid: {"client_id": cid, "is_public": True}
     )
     monkeypatch.setattr(oauth_router, "touch_client", lambda cid: None)
+    # Don't touch the real token store (Supabase) from these tests.
+    monkeypatch.setattr(oauth_router, "consume_jti", lambda *a, **k: True)
+    monkeypatch.setattr(oauth_router, "is_grant_revoked", lambda *a, **k: False)
+    monkeypatch.setattr(oauth_router, "revoke_grant", lambda *a, **k: None)
     return "client-1"
 
 

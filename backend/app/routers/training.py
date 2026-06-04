@@ -46,6 +46,7 @@ def get_current_plan(
         .select(
             "scheduled_date, session_type, sport, duration_min, distance_m, description, intensity_zones, rationale, status"
         )
+        .eq("user_id", user.id)
         .eq("plan_id", plan["id"])
         .gte("scheduled_date", today)
         .order("scheduled_date")

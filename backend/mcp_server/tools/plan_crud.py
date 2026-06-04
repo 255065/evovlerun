@@ -246,6 +246,7 @@ def save_training_plan(
             client.table("planned_workouts")
             .delete()
             .eq("user_id", user_id)
+            .eq("plan_id", plan_id)
             .gte("scheduled_date", d_start.isoformat())
             .lte("scheduled_date", d_end.isoformat())
             .execute()

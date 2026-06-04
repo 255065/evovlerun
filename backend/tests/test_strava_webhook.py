@@ -6,22 +6,39 @@ inline. These tests mock the user lookup + Supabase client so no DB/network
 is touched; they only assert the routing/dispatch decisions.
 """
 
+from types import SimpleNamespace
+
 import pytest
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 
 from app.routers import providers
 
 OWNER_ID = 108189954
 USER_ID = "11111111-1111-1111-1111-111111111111"
 ACTIVITY_ID = 18531785177
+WEBHOOK_TOKEN = "test-webhook-token"
 
 
 class _FakeRequest:
-    def __init__(self, payload):
+    def __init__(self, payload, query=None):
         self._payload = payload
+        # Default to a valid token so existing routing tests exercise the
+        # happy path; auth tests pass query={} or a wrong token explicitly.
+        self.query_params = {"token": WEBHOOK_TOKEN} if query is None else query
 
     async def json(self):
         return self._payload
+
+
+@pytest.fixture(autouse=True)
+def _webhook_secret(monkeypatch):
+    """Pin a known webhook verify token so the POST auth gate is deterministic
+    regardless of the developer's .env."""
+    monkeypatch.setattr(
+        providers,
+        "get_settings",
+        lambda: SimpleNamespace(strava_webhook_verify_token=WEBHOOK_TOKEN),
+    )
 
 
 def _event(**over):
@@ -118,3 +135,41 @@ async def test_delete_event_removes_workout(monkeypatch, known_user):
     assert deleted["table"] == "workouts"
     assert deleted["source_id"] == str(ACTIVITY_ID)
     assert deleted["user_id"] == USER_ID
+
+
+@pytest.mark.asyncio
+async def test_missing_token_is_forbidden(monkeypatch):
+    """A forged push with no secret token must be rejected before any work —
+    this is the fix for the unauthenticated-webhook blocker."""
+    monkeypatch.setattr(providers, "find_user_by_provider_id", lambda **k: USER_ID)
+    bt = BackgroundTasks()
+    with pytest.raises(HTTPException) as exc:
+        await providers.strava_webhook_event(
+            _FakeRequest(_event(aspect_type="delete"), query={}), bt
+        )
+    assert exc.value.status_code == 403
+    assert bt.tasks == []
+
+
+@pytest.mark.asyncio
+async def test_wrong_token_is_forbidden(monkeypatch):
+    monkeypatch.setattr(providers, "find_user_by_provider_id", lambda **k: USER_ID)
+    bt = BackgroundTasks()
+    with pytest.raises(HTTPException) as exc:
+        await providers.strava_webhook_event(
+            _FakeRequest(_event(), query={"token": "wrong"}), bt
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_gate_skipped_when_token_unset(monkeypatch):
+    """Local dev with no configured token falls open (so the dev tunnel works),
+    but production sets the token and is protected."""
+    monkeypatch.setattr(
+        providers, "get_settings", lambda: SimpleNamespace(strava_webhook_verify_token="")
+    )
+    monkeypatch.setattr(providers, "find_user_by_provider_id", lambda **k: USER_ID)
+    bt = BackgroundTasks()
+    result = await providers.strava_webhook_event(_FakeRequest(_event(), query={}), bt)
+    assert result == {"status": "received"}

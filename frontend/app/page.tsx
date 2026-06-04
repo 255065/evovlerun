@@ -49,7 +49,6 @@ function Nav() {
         </Link>
         <nav className="hidden gap-6 text-[13.5px] text-neutral-600 md:flex">
           <a href="#how-it-works" className="hover:text-neutral-950">How it works</a>
-          <a href="#how-it-works" className="hover:text-neutral-950">Integrations</a>
           <a href="#pricing" className="hover:text-neutral-950">Pricing</a>
         </nav>
         <div className="flex items-center gap-2">
@@ -65,6 +64,23 @@ function Nav() {
           >
             Get started
           </Link>
+          {/* Mobile menu — <details> keeps this a server component (no JS state). */}
+          <details className="group relative md:hidden">
+            <summary
+              className="flex cursor-pointer list-none items-center rounded-md p-1.5 text-neutral-700 [&::-webkit-details-marker]:hidden"
+              aria-label="Open menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </svg>
+            </summary>
+            <nav className="absolute right-0 top-full z-20 mt-2 flex w-44 flex-col gap-1 rounded-lg border border-neutral-200 bg-white p-2 text-[13.5px] text-neutral-700 shadow-lg">
+              <a href="#how-it-works" className="rounded-md px-3 py-2 hover:bg-neutral-50">How it works</a>
+              <a href="#pricing" className="rounded-md px-3 py-2 hover:bg-neutral-50">Pricing</a>
+            </nav>
+          </details>
         </div>
       </div>
     </header>
@@ -85,8 +101,9 @@ function Hero() {
       <div className="relative z-10 grid items-center gap-12 md:grid-cols-[1.05fr_1fr]">
         <div className="text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/90 py-1.5 pr-3.5 pl-1.5 text-[13px] text-neutral-600">
-            <span className="rounded-full bg-neutral-950 px-2.5 py-[3px] text-[11px] font-medium tracking-wide text-white">
-              Public Beta
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
+              <span className="evr-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Now live
             </span>
             Connect Strava to ChatGPT &amp; Claude
           </div>
@@ -221,11 +238,13 @@ function Footer() {
           href="/signup"
           className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-6 py-3 text-[14.5px] font-medium text-white"
         >
-          Start free trial →
+          Get started →
         </Link>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12.5px] text-neutral-500">
           <Link href="/login" className="hover:text-neutral-950">Log in</Link>
           <a href="#how-it-works" className="hover:text-neutral-950">How it works</a>
+          <Link href="/privacy" className="hover:text-neutral-950">Privacy</Link>
+          <Link href="/terms" className="hover:text-neutral-950">Terms</Link>
           <a
             href="https://github.com/255065/evovlerun"
             target="_blank"

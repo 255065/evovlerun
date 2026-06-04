@@ -17,6 +17,8 @@ export type LatestActivity = {
   achievement_count: number | null;
   device_name: string | null;
   location: string | null;
+  /** source_id is the Strava activity ID — used to build "View on Strava" links. */
+  source_id: string | null;
 };
 
 export type ActivitySummary = {
@@ -93,7 +95,7 @@ export async function loadCurrentPlan(): Promise<CurrentPlan | null> {
   // Pull from the start of the current week so today-is-mid-week still fills
   // Monday onward; cover a few weeks ahead for the schedule + summaries.
   const since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
-  const { data: sessionRows } = await supabase
+  const { data: sessionRows, error: sessionErr } = await supabase
     .from("planned_workouts")
     .select(
       "scheduled_date, session_type, sport, duration_min, distance_m, description, intensity_zones, rationale, status",
@@ -102,17 +104,19 @@ export async function loadCurrentPlan(): Promise<CurrentPlan | null> {
     .gte("scheduled_date", since)
     .order("scheduled_date")
     .limit(200);
+  if (sessionErr) throw new Error(`loadCurrentPlan: ${sessionErr.message}`);
 
   const upcoming = (sessionRows ?? []) as PlannedSession[];
 
   // Newest plan row (any status) for the header metadata + block focus.
-  const { data: planRow } = await supabase
+  const { data: planRow, error: planErr } = await supabase
     .from("training_plans")
     .select("id, race_type, race_date, target_time_seconds, philosophy, current_phase, weeks, plan_json")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (planErr) throw new Error(`loadCurrentPlan plans: ${planErr.message}`);
 
   if (upcoming.length === 0 && !planRow) return { active: false };
 
@@ -182,22 +186,24 @@ export async function loadActivitySummary(): Promise<ActivitySummary> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: latestRow } = await supabase
+  const { data: latestRow, error: latestErr } = await supabase
     .from("workouts")
     .select(
-      "started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km, elevation_gain_m, notes, raw_payload",
+      "started_at, sport, distance_m, duration_seconds, avg_pace_s_per_km, elevation_gain_m, notes, source_id, raw_payload",
     )
     .eq("user_id", user.id)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (latestErr) throw new Error(`loadActivitySummary latest: ${latestErr.message}`);
 
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
-  const { data: rows } = await supabase
+  const { data: rows, error: weekErr } = await supabase
     .from("workouts")
     .select("distance_m, duration_seconds")
     .eq("user_id", user.id)
     .gte("started_at", since);
+  if (weekErr) throw new Error(`loadActivitySummary week: ${weekErr.message}`);
 
   const weekRows = (rows ?? []) as { distance_m: number | null; duration_seconds: number | null }[];
   const meters = weekRows.reduce((sum, r) => sum + (r.distance_m ?? 0), 0);
@@ -237,6 +243,7 @@ function normalizeLatest(row: Record<string, unknown>): LatestActivity {
     achievement_count: num(raw.achievement_count),
     device_name: str(raw.device_name),
     location: locationParts.length ? locationParts.join(", ") : null,
+    source_id: str(row.source_id),
   };
 }
 
