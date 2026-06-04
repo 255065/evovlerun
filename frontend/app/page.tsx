@@ -101,7 +101,8 @@ function Hero() {
       <div className="relative z-10 grid items-center gap-12 md:grid-cols-[1.05fr_1fr]">
         <div className="text-left">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/90 py-1.5 pr-3.5 pl-1.5 text-[13px] text-neutral-600">
-            <span className="rounded-full bg-emerald-600 px-2.5 py-[3px] text-[11px] font-medium tracking-wide text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-[3px] text-[11px] font-medium text-emerald-800">
+              <span className="evr-pulse h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Now live
             </span>
             Connect Strava to ChatGPT &amp; Claude
