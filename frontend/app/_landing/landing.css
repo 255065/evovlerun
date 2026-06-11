@@ -38,8 +38,9 @@
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
 }
+
+.evr-landing main { overflow-x: hidden; }
 
 .evr-landing ::selection { background: rgba(204, 120, 92, 0.22); }
 
@@ -92,8 +93,8 @@
   border-radius: 999px;
   background: rgba(250, 246, 240, 0.6);
   border: 1px solid transparent;
-  backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
   box-shadow: 0 8px 30px -16px rgba(26,22,18,0.2);
   transition: box-shadow 0.4s var(--ease), background 0.4s var(--ease);
 }
@@ -440,7 +441,7 @@
   max-width: 680px; margin-left: auto; margin-right: auto;
   padding: 11px 16px; border-radius: 999px;
   background: rgba(250,246,240,0.7); border: 1px solid var(--line-soft);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   box-shadow: 0 8px 24px -16px rgba(26,22,18,0.3);
 }
 .evr-landing .play-btn {
