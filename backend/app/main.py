@@ -100,12 +100,26 @@ def root() -> dict[str, str]:
 # ----------------------------------------------------------------------------
 import os  # noqa: E402
 
+# The issuer MUST be byte-identical to what FastMCP advertises in its own
+# /mcp/.well-known/oauth-protected-resource (which the 401 WWW-Authenticate
+# header points strict clients to). FastMCP runs MCP_PUBLIC_URL through
+# pydantic AnyHttpUrl, which normalises it to a trailing slash. ChatGPT
+# validates that the auth-server `issuer` exactly equals the discovered
+# authorization_servers entry — a one-character slash mismatch makes it fail
+# with "something went wrong". Claude normalises and tolerates the mismatch,
+# which is why it worked while ChatGPT didn't. So we publish the same
+# trailing-slash issuer everywhere.
+def _mcp_issuer() -> str:
+    return os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/") + "/"
+
+
 @app.get("/.well-known/oauth-protected-resource", include_in_schema=False)
 def oauth_protected_resource() -> dict:
-    base = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    issuer = _mcp_issuer()
+    base = issuer.rstrip("/")
     return {
         "resource": f"{base}/mcp",
-        "authorization_servers": [base],
+        "authorization_servers": [issuer],
         "scopes_supported": ["mcp"],
         "bearer_methods_supported": ["header"],
     }
@@ -115,14 +129,16 @@ def oauth_protected_resource() -> dict:
 def oauth_authorization_server() -> dict:
     """Full authorization-server metadata for OAuth 2.1 + PKCE + DCR.
 
-    Claude.ai reads this to discover where to register, authorize, and
-    exchange codes. Order matters — leaving any of these fields off makes
+    Claude.ai and ChatGPT read this to discover where to register, authorize,
+    and exchange codes. Order matters — leaving any of these fields off makes
     the discovery probe fail and the user sees "Couldn't reach the MCP
-    server" in the UI.
+    server" in the UI. The `issuer` carries a trailing slash to match
+    FastMCP's normalised advertisement (see _mcp_issuer above).
     """
-    base = os.environ.get("MCP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    issuer = _mcp_issuer()
+    base = issuer.rstrip("/")
     return {
-        "issuer": base,
+        "issuer": issuer,
         "authorization_endpoint": f"{base}/oauth/authorize",
         "token_endpoint": f"{base}/oauth/token",
         "registration_endpoint": f"{base}/oauth/register",
