@@ -2,7 +2,7 @@
 // current segment); all motion is derived from `e` and applied inline so it
 // animates from the single rAF clock in chat-demo.tsx.
 
-const VZ_CHART = 3700;
+const VZ_CHART = 4350;
 const clampv = (x: number) => Math.max(0, Math.min(1, x));
 const easeOut = (p: number) => 1 - Math.pow(1 - clampv(p), 3);
 

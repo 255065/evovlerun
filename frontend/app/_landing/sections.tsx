@@ -219,9 +219,6 @@ export function Footer() {
             <h4>Company</h4>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
-            <a href="https://github.com/255065/evovlerun" target="_blank" rel="noopener noreferrer">
-              GitHub
-            </a>
           </div>
           <div className="footer-col">
             <h4>Get started</h4>
