@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { getConnectionStatus } from "../connections/actions";
-import { getConnectorStatus, listKeys, revokeKeyAction } from "./actions";
-import { KeyForm } from "./key-form";
+import { getConnectorStatus, listKeys } from "./actions";
 import { CopyButton } from "../copy-button";
 
 export const dynamic = "force-dynamic";
@@ -216,78 +214,80 @@ export default async function MCPPage({
         </>
       ) : (
         <>
-          {/* ── ChatGPT & other clients: API keys ─────────────────────── */}
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT or a custom client?</h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Claude uses OAuth automatically. For other assistants, generate a personal API key
-              below and paste it into the install script — one key per device.
-            </p>
-          </div>
-
+          {/* ── Step 1 — Copy URL ─────────────────────────────────────── */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Generate and install</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={1} />
+                Copy your EvolveRun URL
+              </CardTitle>
               <CardDescription>
-                Create an API key. You&apos;ll get an auto-install script plus two manual fallbacks.
+                This is the EvolveRun MCP server URL. You&apos;ll paste it into ChatGPT in the
+                next step.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <KeyForm />
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-neutral-500">ChatGPT MCP URL</label>
+                <div className="flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-50 p-2">
+                  <code className="flex-1 truncate font-mono text-sm text-neutral-900">{MCP_URL}</code>
+                  <CopyButton text={MCP_URL} />
+                </div>
+                <p className="text-xs text-neutral-500">
+                  Same URL for every user — ChatGPT signs you into your own EvolveRun account via
+                  OAuth in the next step.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
+          {/* ── Step 2 — Add to ChatGPT ───────────────────────────────── */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                Your keys
-                {activeKeys.length > 0 && <Badge tone="success">{activeKeys.length} active</Badge>}
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={2} />
+                Add to ChatGPT
               </CardTitle>
               <CardDescription>
-                Revoke a key if it&apos;s compromised. You can have multiple keys active at once (one
-                per device).
+                Open ChatGPT&apos;s advanced app settings, enable Developer mode, create a new
+                app, paste the URL, and approve access when prompted.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {keys.length === 0 ? (
-                <p className="text-sm text-neutral-500">No keys yet — create your first one above.</p>
-              ) : (
-                <ul className="divide-y divide-neutral-200">
-                  {keys.map((k) => {
-                    const isRevoked = k.revoked_at !== null;
-                    return (
-                      <li key={k.id} className="flex items-center justify-between py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{k.name}</p>
-                          <p className="text-xs text-neutral-500">
-                            <code className="font-mono">{k.key_prefix}…</code>
-                            <span className="ml-2">
-                              created {new Date(k.created_at).toLocaleDateString("en-GB")}
-                            </span>
-                            {k.last_used_at && (
-                              <span className="ml-2">
-                                last used {new Date(k.last_used_at).toLocaleDateString("en-GB")}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="ml-3 flex items-center gap-2">
-                          {isRevoked ? (
-                            <Badge tone="warn">revoked</Badge>
-                          ) : (
-                            <form action={revokeKeyAction}>
-                              <input type="hidden" name="id" value={k.id} />
-                              <Button type="submit" variant="ghost" size="sm">
-                                Revoke
-                              </Button>
-                            </form>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              <a
+                href="https://chatgpt.com/settings"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants()}
+              >
+                Open ChatGPT Settings →
+              </a>
+            </CardContent>
+          </Card>
+
+          {/* ── Step 3 — Start chatting ───────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={3} />
+                Start chatting
+              </CardTitle>
+              <CardDescription>
+                Open a new chat, tap +, choose EvolveRun, and start asking about your training.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {SAMPLE_PROMPTS.map((prompt) => (
+                  <li
+                    key={prompt}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2"
+                  >
+                    <span className="truncate text-sm text-neutral-700">{prompt}</span>
+                    <CopyButton text={prompt} />
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
         </>
