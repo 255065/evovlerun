@@ -280,8 +280,8 @@
 .evr-landing .chat .stack { animation: chatPop 0.5s var(--ease) 0.8s both; }
 @keyframes greetIn { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes chatPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.evr-landing .chat-greet { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 0 18px; }
-.evr-landing .chat-greet svg { width: 22px; height: 22px; color: #e8633f; flex-shrink: 0; }
+.evr-landing .chat-greet { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 0 18px; }
+.evr-landing .chat-greet img { width: 26px; height: 26px; flex-shrink: 0; }
 .evr-landing .chat-greet .g {
   font-family: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
   font-weight: 400; font-size: clamp(28px, 3.4vw, 38px); line-height: 1; letter-spacing: -0.015em; color: var(--ink);

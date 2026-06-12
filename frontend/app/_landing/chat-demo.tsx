@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ClaudeStar } from "./icons";
+import Image from "next/image";
 import { VizPace } from "./viz";
 
 // The demo plays like a short product video: a prompt types itself, tools
@@ -169,7 +169,7 @@ export function ChatDemo() {
             {shown && (
               <>
             <div className="chat-greet">
-              <ClaudeStar />
+              <Image src="/claude-star.png" alt="Claude" width={26} height={26} />
               <span className="g">{SEGMENT.greet}</span>
             </div>
 
