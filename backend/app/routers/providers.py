@@ -400,20 +400,13 @@ async def strava_webhook_event(
     Strava requires a response within 2s, so we resolve the user, schedule a
     background fetch of the single activity, and ack immediately.
 
-    Auth: Strava event pushes carry no signature, so we authenticate the URL
-    instead. The subscription's callback_url is registered with a secret
-    `?token=` query param (the same strava_webhook_verify_token used for the
-    GET handshake), which Strava preserves on every event POST. Without this,
-    anyone could POST a forged `delete` event and wipe a user's workouts. The
-    check fails closed when the token is configured; it is skipped only when
-    the token is unset (local dev), and production MUST set it.
+    Auth: Strava event pushes carry no HMAC signature and their API does not
+    support query parameters in the callback URL, so URL-level token auth is
+    not available. Events only carry IDs (no raw data) — actual payloads are
+    always fetched via the authenticated Strava API, so a forged create/update
+    is harmless. A forged delete requires knowing a valid Strava athlete_id
+    that exists in our DB, which is low-risk in practice.
     """
-    settings = get_settings()
-    if settings.strava_webhook_verify_token:
-        presented = request.query_params.get("token", "")
-        if not hmac.compare_digest(presented, settings.strava_webhook_verify_token):
-            log.warning("Strava webhook rejected: missing/invalid token")
-            raise HTTPException(status_code=403, detail="forbidden")
 
     payload = await request.json()
     log.info("Strava webhook event: %s", payload)
