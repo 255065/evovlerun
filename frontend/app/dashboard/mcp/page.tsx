@@ -133,9 +133,9 @@ export default async function MCPPage() {
         <div className="h-px flex-1 bg-neutral-200" />
       </div>
 
-      {/* ── Advanced: API keys (ChatGPT / Gemini / custom) ────────────── */}
+      {/* ── Advanced: API keys (ChatGPT / custom) ─────────────────────── */}
       <div>
-        <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT, Gemini, or a custom client?</h2>
+        <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT or a custom client?</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Claude uses OAuth automatically. For other assistants, generate a personal API key below and
           paste it into the install script — one key per device.
