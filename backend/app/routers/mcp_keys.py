@@ -223,6 +223,38 @@ def list_keys(user: Annotated[CurrentUser, Depends(get_current_user)]) -> list[K
     return out
 
 
+class ConnectorStatus(BaseModel):
+    claude_connected: bool
+
+
+@router.get("/status", response_model=ConnectorStatus)
+def connector_status(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> ConnectorStatus:
+    """Whether this user has ever completed the Claude OAuth connect flow.
+
+    OAuth tokens are stateless JWTs, so the only durable trace of a completed
+    grant is the consumed-token ledger (migration 0008): redeeming an auth
+    code or rotating a refresh token writes a row with the user's id. Any row
+    therefore means "connected at least once". If the table doesn't exist yet
+    (migration not applied) we report not-connected rather than failing the
+    dashboard. NOTE: if a pruning job for oauth_consumed_tokens is ever
+    added, this signal needs a real grants table instead.
+    """
+    client = get_supabase_admin()
+    try:
+        rows = (
+            client.table("oauth_consumed_tokens")
+            .select("jti")
+            .eq("user_id", user.id)
+            .limit(1)
+            .execute()
+        )
+        return ConnectorStatus(claude_connected=bool(rows.data))
+    except Exception:
+        return ConnectorStatus(claude_connected=False)
+
+
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_key(
     key_id: str,

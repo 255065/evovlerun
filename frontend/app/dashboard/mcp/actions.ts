@@ -50,6 +50,22 @@ export async function listKeys(): Promise<KeySummary[]> {
   return (await response.json()) as KeySummary[];
 }
 
+export type ConnectorStatus = { claude_connected: boolean };
+
+export async function getConnectorStatus(): Promise<ConnectorStatus> {
+  try {
+    const token = await getToken();
+    const response = await fetch(`${BACKEND_URL}/mcp-keys/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!response.ok) return { claude_connected: false };
+    return (await response.json()) as ConnectorStatus;
+  } catch {
+    return { claude_connected: false };
+  }
+}
+
 export type CreateKeyState = {
   error: string | null;
   newKey: CreateKeyResult | null;

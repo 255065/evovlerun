@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { listKeys, revokeKeyAction } from "./actions";
+import { getConnectionStatus } from "../connections/actions";
+import { getConnectorStatus, listKeys, revokeKeyAction } from "./actions";
 import { KeyForm } from "./key-form";
 import { CopyButton } from "../copy-button";
 
@@ -31,182 +33,265 @@ function StepNumber({ n }: { n: number }) {
   );
 }
 
-export default async function MCPPage() {
-  const keys = await listKeys();
+type Assistant = "claude" | "chatgpt";
+
+function TabLink({
+  assistant,
+  active,
+  connected,
+  children,
+}: {
+  assistant: Assistant;
+  active: boolean;
+  connected: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={`/dashboard/mcp?assistant=${assistant}`}
+      className={
+        "inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13.5px] font-medium transition " +
+        (active
+          ? "bg-neutral-950 text-white"
+          : "border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50")
+      }
+    >
+      {children}
+      {connected && (
+        <span
+          className={
+            "inline-flex items-center gap-1 text-[11px] font-semibold " +
+            (active ? "text-emerald-300" : "text-emerald-600")
+          }
+        >
+          ● Connected
+        </span>
+      )}
+    </Link>
+  );
+}
+
+export default async function MCPPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ assistant?: string }>;
+}) {
+  const params = await searchParams;
+  const tab: Assistant = params.assistant === "chatgpt" ? "chatgpt" : "claude";
+
+  const [keys, connector, strava] = await Promise.all([
+    listKeys(),
+    getConnectorStatus(),
+    getConnectionStatus("strava"),
+  ]);
   const activeKeys = keys.filter((k) => !k.revoked_at);
+  const stravaConnected = strava?.connected ?? false;
 
   return (
     <div className="space-y-10">
       {/* ── Hero ──────────────────────────────────────────────────────── */}
       <div>
-        <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">Connect Claude to EvolveRun</h1>
+        <h1 className="evr-headline text-[clamp(34px,4.5vw,48px)] tracking-[-0.03em]">
+          Add EvolveRun to your AI
+        </h1>
         <p className="mt-2 text-[15px] text-neutral-600">Three steps. Takes under a minute.</p>
-        <p className="mt-3 text-sm text-neutral-500">
-          Set up EvolveRun in Claude in your browser first, then use it anywhere you use Claude. This
-          setup works best on a desktop browser.
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[12.5px] text-neutral-500">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="4" width="20" height="14" rx="2" />
+            <path d="M8 21h8M12 18v3" />
+          </svg>
+          This setup works best on a desktop browser.
         </p>
       </div>
 
-      {/* ── Step 1 — Copy URL ─────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <StepNumber n={1} />
-            Copy your EvolveRun URL
-          </CardTitle>
-          <CardDescription>
-            This is the EvolveRun MCP server URL. You&apos;ll paste it into Claude in the next step.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-neutral-500">Claude MCP URL</label>
-            <div className="flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-50 p-2">
-              <code className="flex-1 truncate font-mono text-sm text-neutral-900">{MCP_URL}</code>
-              <CopyButton text={MCP_URL} />
-            </div>
-            <p className="text-xs text-neutral-500">
-              Same URL for every user — Claude signs you into your own EvolveRun account via OAuth in
-              the next step.
+      {/* ── Prerequisite: Strava ──────────────────────────────────────── */}
+      {stravaConnected ? (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-800">
+          <svg viewBox="0 0 24 24" className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12l5 5 9-9" />
+          </svg>
+          Strava connected — your data is ready.
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-800">
+          <span>Connect Strava first so your AI has data to read.</span>
+          <Link
+            href="/dashboard/connections"
+            className="font-medium text-amber-900 underline underline-offset-2 hover:no-underline"
+          >
+            Connect Strava →
+          </Link>
+        </div>
+      )}
+
+      {/* ── Assistant tabs ────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <TabLink assistant="claude" active={tab === "claude"} connected={connector.claude_connected}>
+          Claude
+        </TabLink>
+        <TabLink assistant="chatgpt" active={tab === "chatgpt"} connected={activeKeys.length > 0}>
+          ChatGPT &amp; other clients
+        </TabLink>
+      </div>
+
+      {tab === "claude" ? (
+        <>
+          {/* ── Step 1 — Copy URL ─────────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={1} />
+                Copy your EvolveRun URL
+              </CardTitle>
+              <CardDescription>
+                This is the EvolveRun MCP server URL. You&apos;ll paste it into Claude in the next
+                step.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-neutral-500">Claude MCP URL</label>
+                <div className="flex items-center gap-2 rounded-xl border border-neutral-300 bg-neutral-50 p-2">
+                  <code className="flex-1 truncate font-mono text-sm text-neutral-900">{MCP_URL}</code>
+                  <CopyButton text={MCP_URL} />
+                </div>
+                <p className="text-xs text-neutral-500">
+                  Same URL for every user — Claude signs you into your own EvolveRun account via
+                  OAuth in the next step.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Step 2 — Add to Claude ────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={2} />
+                Add to Claude
+              </CardTitle>
+              <CardDescription>
+                Open Claude&apos;s connector settings, click <strong>Add custom connector</strong>,
+                paste the URL you just copied, and approve access when prompted.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <a
+                href="https://claude.ai/settings/connectors"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants()}
+              >
+                Open Claude Connectors →
+              </a>
+            </CardContent>
+          </Card>
+
+          {/* ── Step 3 — Start chatting ───────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <StepNumber n={3} />
+                Start chatting
+              </CardTitle>
+              <CardDescription>
+                That&apos;s it. Ask Claude anything about your training — it now has your real
+                Strava data and computed metrics (CTL, ATL, TSB, ACWR).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {SAMPLE_PROMPTS.map((prompt) => (
+                  <li
+                    key={prompt}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2"
+                  >
+                    <span className="truncate text-sm text-neutral-700">{prompt}</span>
+                    <CopyButton text={prompt} />
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <>
+          {/* ── ChatGPT & other clients: API keys ─────────────────────── */}
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT or a custom client?</h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Claude uses OAuth automatically. For other assistants, generate a personal API key
+              below and paste it into the install script — one key per device.
             </p>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* ── Step 2 — Add to Claude ────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <StepNumber n={2} />
-            Add to Claude
-          </CardTitle>
-          <CardDescription>
-            Open Claude&apos;s connector settings, click <strong>Add custom connector</strong>, paste
-            the URL you just copied, and approve access when prompted.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <a
-            href="https://claude.ai/settings/connectors"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants()}
-          >
-            Open Claude Connectors →
-          </a>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Generate and install</CardTitle>
+              <CardDescription>
+                Create an API key. You&apos;ll get an auto-install script plus two manual fallbacks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <KeyForm />
+            </CardContent>
+          </Card>
 
-      {/* ── Step 3 — Start chatting ───────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <StepNumber n={3} />
-            Start chatting
-          </CardTitle>
-          <CardDescription>
-            That&apos;s it. Ask Claude anything about your training — it now has your real Strava data
-            and computed metrics (CTL, ATL, TSB, ACWR).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2">
-            {SAMPLE_PROMPTS.map((prompt) => (
-              <li
-                key={prompt}
-                className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2"
-              >
-                <span className="truncate text-sm text-neutral-700">{prompt}</span>
-                <CopyButton text={prompt} />
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* ── Divider ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 pt-2">
-        <div className="h-px flex-1 bg-neutral-200" />
-        <span className="text-xs uppercase tracking-wider text-neutral-500">
-          Other clients & API keys
-        </span>
-        <div className="h-px flex-1 bg-neutral-200" />
-      </div>
-
-      {/* ── Advanced: API keys (ChatGPT / custom) ─────────────────────── */}
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Using ChatGPT or a custom client?</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Claude uses OAuth automatically. For other assistants, generate a personal API key below and
-          paste it into the install script — one key per device.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Generate and install</CardTitle>
-          <CardDescription>
-            Create an API key. You&apos;ll get an auto-install script plus two manual fallbacks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <KeyForm />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            Your keys
-            {activeKeys.length > 0 && <Badge tone="success">{activeKeys.length} active</Badge>}
-          </CardTitle>
-          <CardDescription>
-            Revoke a key if it&apos;s compromised. You can have multiple keys active at once (one per
-            device).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {keys.length === 0 ? (
-            <p className="text-sm text-neutral-500">No keys yet — create your first one above.</p>
-          ) : (
-            <ul className="divide-y divide-neutral-200">
-              {keys.map((k) => {
-                const isRevoked = k.revoked_at !== null;
-                return (
-                  <li key={k.id} className="flex items-center justify-between py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{k.name}</p>
-                      <p className="text-xs text-neutral-500">
-                        <code className="font-mono">{k.key_prefix}…</code>
-                        <span className="ml-2">
-                          created {new Date(k.created_at).toLocaleDateString("en-GB")}
-                        </span>
-                        {k.last_used_at && (
-                          <span className="ml-2">
-                            last used {new Date(k.last_used_at).toLocaleDateString("en-GB")}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="ml-3 flex items-center gap-2">
-                      {isRevoked ? (
-                        <Badge tone="warn">revoked</Badge>
-                      ) : (
-                        <form action={revokeKeyAction}>
-                          <input type="hidden" name="id" value={k.id} />
-                          <Button type="submit" variant="ghost" size="sm">
-                            Revoke
-                          </Button>
-                        </form>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                Your keys
+                {activeKeys.length > 0 && <Badge tone="success">{activeKeys.length} active</Badge>}
+              </CardTitle>
+              <CardDescription>
+                Revoke a key if it&apos;s compromised. You can have multiple keys active at once (one
+                per device).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {keys.length === 0 ? (
+                <p className="text-sm text-neutral-500">No keys yet — create your first one above.</p>
+              ) : (
+                <ul className="divide-y divide-neutral-200">
+                  {keys.map((k) => {
+                    const isRevoked = k.revoked_at !== null;
+                    return (
+                      <li key={k.id} className="flex items-center justify-between py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">{k.name}</p>
+                          <p className="text-xs text-neutral-500">
+                            <code className="font-mono">{k.key_prefix}…</code>
+                            <span className="ml-2">
+                              created {new Date(k.created_at).toLocaleDateString("en-GB")}
+                            </span>
+                            {k.last_used_at && (
+                              <span className="ml-2">
+                                last used {new Date(k.last_used_at).toLocaleDateString("en-GB")}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="ml-3 flex items-center gap-2">
+                          {isRevoked ? (
+                            <Badge tone="warn">revoked</Badge>
+                          ) : (
+                            <form action={revokeKeyAction}>
+                              <input type="hidden" name="id" value={k.id} />
+                              <Button type="submit" variant="ghost" size="sm">
+                                Revoke
+                              </Button>
+                            </form>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   disconnectProviderAction,
   getConnectionStatus,
 } from "./connections/actions";
+import { getConnectorStatus, listKeys } from "./mcp/actions";
 import { CopyButton } from "./copy-button";
 import { LatestActivityCard } from "./latest-activity-card";
 
@@ -29,14 +30,19 @@ export default async function DashboardPage() {
   const athleteName = (user?.user_metadata?.full_name ?? "").trim() || "Athlete";
   const firstName = athleteName.split(" ")[0] || "athlete";
 
-  const [strava, summary] = await Promise.all([
+  const [strava, summary, connector, keys] = await Promise.all([
     getConnectionStatus("strava"),
     loadActivitySummary(),
+    getConnectorStatus(),
+    listKeys(),
   ]);
 
   const connected = strava?.connected ?? false;
   const latest = summary?.latest ?? null;
   const week = summary?.week ?? { activities: 0, km: 0, hours: 0 };
+  const claudeConnected = connector.claude_connected;
+  const chatgptConnected = keys.some((k) => !k.revoked_at);
+  const connectorAdded = claudeConnected || chatgptConnected;
 
   return (
     <>
@@ -46,6 +52,33 @@ export default async function DashboardPage() {
       <p className="mt-4 text-[15px] text-neutral-600">
         Welcome back, <span className="capitalize">{firstName}</span>.
       </p>
+
+      {/* Setup checklist — shown until Strava + a connector are both live */}
+      {!(connected && connectorAdded) && (
+        <div className="mt-10 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
+          <SectionLabel>Get set up</SectionLabel>
+          <ul className="mt-4 space-y-3">
+            <ChecklistStep
+              n={1}
+              done={connected}
+              label="Connect Strava"
+              action={{ label: "Connect", href: "/dashboard/connections" }}
+            />
+            <ChecklistStep
+              n={2}
+              done={connectorAdded}
+              label="Add EvolveRun to Claude or ChatGPT"
+              action={{ label: "Open setup", href: "/dashboard/mcp" }}
+            />
+            <ChecklistStep
+              n={3}
+              done={false}
+              label="Ask your first question"
+              action={{ label: "See prompts", href: "#prompts" }}
+            />
+          </ul>
+        </div>
+      )}
 
       {/* Connected sources */}
       <SectionLabel className="mt-16">Connected sources</SectionLabel>
@@ -93,8 +126,22 @@ export default async function DashboardPage() {
       {/* AI coach */}
       <SectionHeader label="AI coach" action="Open setup" href="/dashboard/mcp" />
       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <CoachCard name="Claude" tagline="Considered, careful with nuance" logo={<ClaudeLogo />} bg="#fde2d4" />
-        <CoachCard name="ChatGPT" tagline="Versatile, fast, broad" logo={<ChatGPTLogo />} bg="#d6f0e2" />
+        <CoachCard
+          name="Claude"
+          tagline="Considered, careful with nuance"
+          logo={<ClaudeLogo />}
+          bg="#fde2d4"
+          href="/dashboard/mcp?assistant=claude"
+          connected={claudeConnected}
+        />
+        <CoachCard
+          name="ChatGPT"
+          tagline="Versatile, fast, broad"
+          logo={<ChatGPTLogo />}
+          bg="#d6f0e2"
+          href="/dashboard/mcp?assistant=chatgpt"
+          connected={chatgptConnected}
+        />
       </div>
 
       {/* Latest activity */}
@@ -118,7 +165,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick prompts */}
-      <SectionHeader label="Quick prompts" action="Connector setup" href="/dashboard/mcp" />
+      <div id="prompts" className="scroll-mt-24">
+        <SectionHeader label="Quick prompts" action="Connector setup" href="/dashboard/mcp" />
+      </div>
       <p className="mt-4 text-[15px] text-neutral-700">
         Copy any of these into Claude.ai or ChatGPT once the EvolveRun connector is attached.
       </p>
@@ -197,11 +246,15 @@ function CoachCard({
   tagline,
   logo,
   bg,
+  href,
+  connected,
 }: {
   name: string;
   tagline: string;
   logo: React.ReactNode;
   bg: string;
+  href: string;
+  connected: boolean;
 }) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-5">
@@ -210,17 +263,62 @@ function CoachCard({
           {logo}
         </div>
         <div>
-          <div className="text-[15.5px] font-semibold">{name}</div>
+          <div className="flex items-center gap-2 text-[15.5px] font-semibold">
+            {name}
+            {connected && (
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                Connected
+              </span>
+            )}
+          </div>
           <div className="text-[13px] text-neutral-600">{tagline}</div>
         </div>
       </div>
       <Link
-        href="/dashboard/mcp"
+        href={href}
         className="rounded-md border border-neutral-300 bg-white px-3.5 py-1.5 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
       >
-        Add
+        {connected ? "Manage" : "Add"}
       </Link>
     </div>
+  );
+}
+
+function ChecklistStep({
+  n,
+  done,
+  label,
+  action,
+}: {
+  n: number;
+  done: boolean;
+  label: string;
+  action: { label: string; href: string };
+}) {
+  return (
+    <li className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        {done ? (
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5 9-9" />
+            </svg>
+          </span>
+        ) : (
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#dc6b3f] text-xs font-semibold text-white">
+            {n}
+          </span>
+        )}
+        <span className={"text-[14.5px] " + (done ? "text-neutral-400 line-through" : "text-neutral-800")}>
+          {label}
+        </span>
+      </div>
+      {!done && (
+        <Link href={action.href} className="text-[13px] font-medium text-[#dc6b3f] hover:underline">
+          {action.label} →
+        </Link>
+      )}
+    </li>
   );
 }
 
