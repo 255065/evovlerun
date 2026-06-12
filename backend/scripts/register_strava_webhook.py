@@ -39,9 +39,11 @@ def main() -> None:
         print(f"Missing env vars: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    # The ?token= param is preserved by Strava on every event POST so the
-    # handler can verify the delivery is genuine (providers.py:406-410).
-    callback_url = f"{backend_url}/providers/strava/webhook?token={verify_token}"
+    # Strava's API does not support query parameters in the callback URL —
+    # registration fails with 400 if any are present. Events are low-risk
+    # (IDs only; data is fetched via authenticated API) so we rely on the
+    # hub.verify_token handshake during registration as the sole auth step.
+    callback_url = f"{backend_url}/providers/strava/webhook"
     print(f"Registering Strava webhook → {callback_url}")
 
     resp = httpx.post(PUSH_SUBSCRIPTIONS_URL, data={
