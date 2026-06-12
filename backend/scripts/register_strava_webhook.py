@@ -39,7 +39,9 @@ def main() -> None:
         print(f"Missing env vars: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    callback_url = f"{backend_url}/providers/strava/webhook"
+    # The ?token= param is preserved by Strava on every event POST so the
+    # handler can verify the delivery is genuine (providers.py:406-410).
+    callback_url = f"{backend_url}/providers/strava/webhook?token={verify_token}"
     print(f"Registering Strava webhook → {callback_url}")
 
     resp = httpx.post(PUSH_SUBSCRIPTIONS_URL, data={
@@ -52,16 +54,37 @@ def main() -> None:
     if resp.status_code == 201:
         sub = resp.json()
         print(f"✓ Subscription created — id: {sub.get('id')} (save this for reference)")
-    elif resp.status_code == 409:
-        print("Subscription already exists for this client_id.")
-        # Fetch existing subscription to show the id.
+    elif resp.status_code in (400, 409) and "already exists" in resp.text:
+        print("Subscription already exists — deleting and re-registering with updated callback URL.")
         get_resp = httpx.get(PUSH_SUBSCRIPTIONS_URL, params={
             "client_id": client_id, "client_secret": client_secret,
         }, timeout=10)
-        if get_resp.status_code == 200:
-            subs = get_resp.json()
-            for s in subs:
-                print(f"  Existing id={s['id']}  callback={s['callback_url']}")
+        if get_resp.status_code != 200:
+            print(f"✗ Could not fetch existing subscriptions: {get_resp.text}", file=sys.stderr)
+            sys.exit(1)
+        for s in get_resp.json():
+            print(f"  Deleting id={s['id']}  old_callback={s['callback_url']}")
+            del_resp = httpx.delete(
+                f"{PUSH_SUBSCRIPTIONS_URL}/{s['id']}",
+                params={"client_id": client_id, "client_secret": client_secret},
+                timeout=15,
+            )
+            if del_resp.status_code not in (200, 204):
+                print(f"✗ Delete failed ({del_resp.status_code}): {del_resp.text}", file=sys.stderr)
+                sys.exit(1)
+        # Retry registration now that the old subscription is gone.
+        retry = httpx.post(PUSH_SUBSCRIPTIONS_URL, data={
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "callback_url": callback_url,
+            "verify_token": verify_token,
+        }, timeout=15)
+        if retry.status_code == 201:
+            sub = retry.json()
+            print(f"✓ Subscription created — id: {sub.get('id')} (save this for reference)")
+        else:
+            print(f"✗ Re-registration failed ({retry.status_code}): {retry.text}", file=sys.stderr)
+            sys.exit(1)
     else:
         print(f"✗ Failed ({resp.status_code}): {resp.text}", file=sys.stderr)
         sys.exit(1)

@@ -348,11 +348,17 @@ def strava_webhook_verify(
     request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, str]:
-    """Strava sends a one-time GET to verify the endpoint when you create a subscription."""
+    """Strava sends a one-time GET to verify the endpoint when you create a subscription.
+
+    Strava also does a plain reachability GET (no hub.* params) before sending
+    the challenge — that must return 200 or registration fails.
+    """
     mode = request.query_params.get("hub.mode")
+    if not mode:
+        return {}  # reachability probe — just confirm we're alive
+
     token = request.query_params.get("hub.verify_token")
     challenge = request.query_params.get("hub.challenge")
-
     if mode != "subscribe" or token != settings.strava_webhook_verify_token or not challenge:
         raise HTTPException(status_code=403, detail="Webhook verification failed")
     return {"hub.challenge": challenge}
