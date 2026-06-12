@@ -169,7 +169,7 @@ export function ChatDemo() {
             {shown && (
               <>
             <div className="chat-greet">
-              <Image src="/claude-star.png" alt="Claude" width={26} height={26} />
+              <Image src="/claude-star.png" alt="Claude" width={26} height={22} />
               <span className="g">{SEGMENT.greet}</span>
             </div>
 
