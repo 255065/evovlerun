@@ -9,8 +9,8 @@ type SearchParams = { week?: string };
 /**
  * Training page — read-only view of the plan the chat assistant saved.
  *
- * V1 has no in-app plan generator. The assistant (Claude / ChatGPT /
- * Gemini, via the EvolveRun MCP connector) writes plans through
+ * V1 has no in-app plan generator. The assistant (Claude / ChatGPT,
+ * via the EvolveRun MCP connector) writes plans through
  * `save-training-plan`. This page renders the schedule one week at a time
  * (paged via ?week=<offset>), plus an empty state when nothing is saved.
  */
@@ -103,7 +103,7 @@ export function EmptyState() {
       </h2>
       <p className="mx-auto mt-3 max-w-md text-[14.5px] text-neutral-600">
         EvolveRun doesn&apos;t generate plans in the app. Ask your connected AI coach —
-        Claude, ChatGPT, or Gemini — through the EvolveRun connector to build a plan and
+        Claude or ChatGPT — through the EvolveRun connector to build a plan and
         save it. Once saved, it shows up here automatically.
       </p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4">

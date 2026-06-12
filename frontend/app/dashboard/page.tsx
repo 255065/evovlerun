@@ -120,7 +120,7 @@ export default async function DashboardPage() {
       {/* Quick prompts */}
       <SectionHeader label="Quick prompts" action="Connector setup" href="/dashboard/mcp" />
       <p className="mt-4 text-[15px] text-neutral-700">
-        Copy any of these into Claude.ai, ChatGPT, or Gemini once the EvolveRun connector is attached.
+        Copy any of these into Claude.ai or ChatGPT once the EvolveRun connector is attached.
       </p>
       <div className="mt-6 space-y-3">
         {QUICK_PROMPTS.map((p) => (

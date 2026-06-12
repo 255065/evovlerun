@@ -562,7 +562,7 @@
 .evr-landing .statline .unit { font-size: 18px; color: var(--accent); font-weight: 600; }
 
 /* security mini-rows */
-.evr-landing .sec-rows { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+.evr-landing .sec-rows { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; }
 .evr-landing .sec-row { display: flex; align-items: center; gap: 11px; font-size: 13.5px; color: var(--ink-2); }
 .evr-landing .sec-row svg { width: 16px; height: 16px; color: #2d7a48; flex-shrink: 0; }
 
@@ -617,6 +617,7 @@
   margin: 0 auto; max-width: 16ch;
   font-family: var(--font-serif); font-weight: 500; font-size: clamp(34px, 5vw, 58px);
   line-height: 1.0; letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 .evr-landing .cta-inner p { margin: 20px auto 0; max-width: 32rem; font-size: 17px; color: rgba(250,246,240,0.7); }
 .evr-landing .cta-inner .btn-light { margin-top: 32px; background: #faf6f0; color: var(--ink); }
@@ -641,7 +642,7 @@
 .evr-landing .nav-wrap { padding: 10px; }
 .evr-landing .nav { padding: 9px 9px 9px 18px; }
 .evr-landing .nav-brand { font-size: 15px; }
-.evr-landing .nav-cta .btn-ghost { display: none; }
+.evr-landing .nav-cta .btn-ghost { padding: 9px 10px; }
 .evr-landing .btn { font-size: 13px; padding: 9px 15px; }
 
   /* hero */
@@ -665,6 +666,7 @@
 .evr-landing .bento { margin-top: 36px; gap: 14px; }
 .evr-landing .card { padding: 26px; }
 .evr-landing .card h3 { font-size: 22px; }
+.evr-landing .sec-rows { grid-template-columns: 1fr; }
 
   /* demo window — fill width, tighter, taller reserve for wrapped content */
 .evr-landing .demo-section { --stack-reserve: 0px; --chat-reserve: 0px; padding: 6px 16px 48px; }
@@ -699,4 +701,9 @@
 .evr-landing .footer-grid { flex-direction: column; gap: 32px; }
 .evr-landing .footer-cols { gap: 40px; }
 .evr-landing .footer-bottom { font-size: 12px; gap: 8px; }
+}
+
+/* fold-size screens — the eyebrow wraps, so push the hero further below the nav */
+@media (max-width: 360px) {
+.evr-landing .hero { padding-top: 128px; }
 }

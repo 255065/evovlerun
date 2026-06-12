@@ -6,18 +6,17 @@ export const metadata: Metadata = {
 };
 
 // NOTE FOR THE FOUNDER:
-// Structurally-complete starting point, NOT legal advice. Fill in every
-// [BRACKETED] placeholder, set your governing law, and have it reviewed
+// Structurally-complete starting point, NOT legal advice. Have it reviewed
 // before charging customers (Stripe requires published terms).
 export default function TermsPage() {
   return (
     <article className="prose-legal">
       <h1 className="evr-headline text-[34px] tracking-[-0.02em]">Terms of Service</h1>
-      <p className="mt-2 text-[13px] text-neutral-500">Last updated: [DATE]</p>
+      <p className="mt-2 text-[13px] text-neutral-500">Last updated: June 12, 2026</p>
 
       <Section title="1. The service">
         EvolveRun provides a hosted connector that lets an AI assistant you
-        control (Claude, ChatGPT, or Gemini) answer questions about your own
+        control (Claude or ChatGPT) answer questions about your own
         endurance-training data, plus a web app for account management and
         viewing your plan. By creating an account you agree to these terms.
       </Section>
@@ -30,11 +29,14 @@ export default function TermsPage() {
 
       <Section title="3. Subscriptions &amp; billing">
         EvolveRun is a paid subscription billed through Stripe at the price shown
-        at checkout ([PRICE] per [PERIOD]). Subscriptions renew automatically
+        at checkout (€7.99 per month). Subscriptions renew automatically
         until cancelled. You can cancel anytime from your account; access
-        continues until the end of the current billing period. [STATE YOUR
-        REFUND POLICY HERE — e.g. no refunds for partial periods, or a 14-day
-        cooling-off period where required by law.]
+        continues until the end of the current billing period. If you are a
+        consumer in the EU, you have a 14-day right of withdrawal from the day
+        you subscribe; by using the service during that period you consent to
+        immediate performance, and if you withdraw we may deduct a
+        proportionate amount for the time already used. Beyond that, partial
+        billing periods are not refunded.
       </Section>
 
       <Section title="4. Acceptable use">
@@ -47,7 +49,7 @@ export default function TermsPage() {
         Your use of connected services (Strava, and your chosen AI assistant
         provider) is also governed by their terms. Our handling of your data is
         described in our <a href="/privacy">Privacy Policy</a>. EvolveRun is not
-        endorsed or certified by Strava, Anthropic, OpenAI, or Google.
+        endorsed or certified by Strava, Anthropic, or OpenAI.
       </Section>
 
       <Section title="6. Not medical or coaching advice">
@@ -60,8 +62,8 @@ export default function TermsPage() {
       <Section title="7. Disclaimers &amp; liability">
         The service is provided &quot;as is&quot; without warranties of any
         kind. To the maximum extent permitted by law, EvolveRun&apos;s liability
-        is limited to the amount you paid in the [12] months preceding the
-        claim. [ADJUST TO YOUR JURISDICTION.]
+        is limited to the amount you paid in the 12 months preceding the
+        claim.
       </Section>
 
       <Section title="8. Termination">
@@ -71,12 +73,12 @@ export default function TermsPage() {
       </Section>
 
       <Section title="9. Governing law">
-        These terms are governed by the laws of [JURISDICTION, e.g. Denmark],
+        These terms are governed by the laws of Denmark,
         without regard to conflict-of-laws rules.
       </Section>
 
       <Section title="10. Contact">
-        Questions about these terms: <strong>[support@yourdomain]</strong>.
+        Questions about these terms: <strong>vstoerum@gmail.com</strong>.
       </Section>
     </article>
   );

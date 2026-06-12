@@ -176,15 +176,56 @@ export function Features() {
   );
 }
 
+const PRICE_FEATS = [
+  "Unlimited questions in Claude & ChatGPT",
+  "Full Strava history, synced automatically",
+  "Load, recovery & trend analysis tools",
+  "Adaptive week and race plans",
+  "Cancel anytime — keeps working until your period ends",
+];
+
+export function Pricing() {
+  return (
+    <section className="section" id="pricing">
+      <div className="section-head center reveal">
+        <div className="kicker">Pricing</div>
+        <h2>
+          One plan. <span className="grad-text">Everything included.</span>
+        </h2>
+      </div>
+      <div className="price-card reveal d1">
+        <div className="price-line">
+          <span className="amt">€7.99</span>
+          <span className="per">/ month</span>
+        </div>
+        <div className="price-alt">Monthly or yearly — pick at checkout</div>
+        <ul className="price-feats">
+          {PRICE_FEATS.map((f) => (
+            <li key={f}>
+              <Check /> {f}
+            </li>
+          ))}
+        </ul>
+        <Link
+          className="btn btn-dark btn-lg"
+          href="/signup"
+          style={{ width: "100%", justifyContent: "center", boxSizing: "border-box" }}
+        >
+          Start your subscription <span className="arrow">→</span>
+        </Link>
+        <p className="price-fine">Billed securely through Stripe. Cancel in one click from your account.</p>
+      </div>
+    </section>
+  );
+}
+
 export function CTA() {
   return (
     <section className="cta" style={{ marginTop: 40 }}>
       <div className="cta-inner reveal">
         <div className="cta-bloom" aria-hidden="true"></div>
         <h2>
-          Ready to let your AI read
-          <br />
-          your <em className="grad-text">training data?</em>
+          Ready to let your AI read your <em className="grad-text">training data?</em>
         </h2>
         <p>Connect Strava in two minutes and ask your first real question tonight.</p>
         <Link className="btn btn-light btn-lg" href="/signup">
@@ -219,6 +260,7 @@ export function Footer() {
             <h4>Company</h4>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
+            <a href="mailto:vstoerum@gmail.com">Contact</a>
           </div>
           <div className="footer-col">
             <h4>Get started</h4>

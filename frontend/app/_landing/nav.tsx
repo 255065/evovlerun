@@ -23,6 +23,7 @@ export function Nav() {
           <a href="#demo">Demo</a>
           <a href="#how">How it works</a>
           <a href="#features">Why it&apos;s different</a>
+          <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
           <Link className="btn btn-ghost" href="/login">

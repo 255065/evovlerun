@@ -4,7 +4,6 @@ import {
   connectProviderAction,
   disconnectProviderAction,
   getConnectionStatus,
-  syncProviderAction,
 } from "./actions";
 
 type Provider = {
@@ -143,27 +142,15 @@ export default async function ConnectionsPage({
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 {!p.enabled ? null : isConnected ? (
-                  <>
-                    <form action={syncProviderAction}>
-                      <input type="hidden" name="provider" value={p.id} />
-                      <input type="hidden" name="days" value="30" />
-                      <button
-                        type="submit"
-                        className="inline-flex items-center justify-center rounded-md border border-neutral-300 bg-white px-4 py-2 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
-                      >
-                        Sync last 30 days
-                      </button>
-                    </form>
-                    <form action={disconnectProviderAction}>
-                      <input type="hidden" name="provider" value={p.id} />
-                      <button
-                        type="submit"
-                        className="text-[13px] text-neutral-500 hover:text-neutral-950"
-                      >
-                        Disconnect
-                      </button>
-                    </form>
-                  </>
+                  <form action={disconnectProviderAction}>
+                    <input type="hidden" name="provider" value={p.id} />
+                    <button
+                      type="submit"
+                      className="text-[13px] text-neutral-500 hover:text-neutral-950"
+                    >
+                      Disconnect
+                    </button>
+                  </form>
                 ) : p.authMode === "credentials" ? (
                   <Link
                     href={`/dashboard/connections/${p.id}`}

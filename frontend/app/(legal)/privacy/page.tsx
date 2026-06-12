@@ -7,20 +7,20 @@ export const metadata: Metadata = {
 };
 
 // NOTE FOR THE FOUNDER:
-// This is a structurally-complete starting point, NOT legal advice. Fill in
-// every [BRACKETED] placeholder and have it reviewed before launch. The
-// Strava-data and deletion sections are required for Strava API production
-// approval; the billing section is required for Stripe.
+// This is a structurally-complete starting point, NOT legal advice. Have it
+// reviewed before launch. The Strava-data and deletion sections are required
+// for Strava API production approval; the billing section is required for
+// Stripe.
 export default function PrivacyPage() {
   return (
     <article className="prose-legal">
       <h1 className="evr-headline text-[34px] tracking-[-0.02em]">Privacy Policy</h1>
-      <p className="mt-2 text-[13px] text-neutral-500">Last updated: [DATE]</p>
+      <p className="mt-2 text-[13px] text-neutral-500">Last updated: June 12, 2026</p>
 
       <Section title="Who we are">
         EvolveRun (&quot;EvolveRun&quot;, &quot;we&quot;, &quot;us&quot;) is operated by
-        [LEGAL ENTITY / SOLE TRADER NAME], [ADDRESS], [COUNTRY]. For any privacy
-        question or request, contact us at <strong>[privacy@yourdomain]</strong>.
+        Valdemar Størum (sole trader), Denmark. For any privacy
+        question or request, contact us at <strong>vstoerum@gmail.com</strong>.
       </Section>
 
       <Section title="What data we collect">
@@ -48,7 +48,7 @@ export default function PrivacyPage() {
       <Section title="How we use your data">
         We use your data solely to provide the service: syncing your Strava
         activities, computing training metrics, and exposing them to the AI
-        assistant (Claude, ChatGPT, or Gemini) that you connect via the
+        assistant (Claude or ChatGPT) that you connect via the
         EvolveRun connector. We do not sell your data or use it for advertising.
       </Section>
 
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
         service: <strong>Supabase</strong> (database, authentication),{" "}
         <strong>Stripe</strong> (payments), <strong>Railway</strong> and{" "}
         <strong>Vercel</strong> (hosting). When you use the AI connector, your
-        selected assistant provider (Anthropic, OpenAI, or Google) receives the
+        selected assistant provider (Anthropic or OpenAI) receives the
         training data the assistant requests, under their respective terms.
       </Section>
 
@@ -74,13 +74,13 @@ export default function PrivacyPage() {
         account at any time from <strong>Account settings</strong>; this
         permanently removes your profile, connected-provider tokens, imported
         activities, and saved plans. You may also email{" "}
-        <strong>[privacy@yourdomain]</strong> to request deletion.
+        <strong>vstoerum@gmail.com</strong> to request deletion.
       </Section>
 
       <Section title="Your rights">
         Depending on your location (e.g. under the GDPR), you have the right to
         access, correct, export, or delete your personal data, and to withdraw
-        consent. Contact <strong>[privacy@yourdomain]</strong> to exercise these
+        consent. Contact <strong>vstoerum@gmail.com</strong> to exercise these
         rights.
       </Section>
 
