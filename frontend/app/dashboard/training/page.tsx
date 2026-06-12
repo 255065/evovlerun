@@ -202,7 +202,7 @@ function WeekArrow({ href, label, dir }: { href: string; label: string; dir: "pr
       aria-label={label}
       className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-950"
     >
-      {dir === "prev" ? "←" : "→"}
+      {dir === "prev" ? "<" : ">"}
     </Link>
   );
 }

@@ -78,25 +78,21 @@ export function ChatDemo() {
       return () => cancelAnimationFrame(id);
     }
 
-    const check = () => {
-      const vh = window.innerHeight || 800;
-      const r = el.getBoundingClientRect();
-      const inView = r.top < vh * 0.72 && r.bottom > vh * 0.05;
-      if (inView && !startedRef.current) {
-        startedRef.current = true;
-        setShown(true);
-        setPlaying(true);
-      }
-    };
-    check();
-    const t = setTimeout(check, 200);
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
-    };
+    // IntersectionObserver instead of a scroll listener: no per-scroll layout
+    // reads, so jumping here via the nav anchor stays smooth.
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && !startedRef.current) {
+          startedRef.current = true;
+          setShown(true);
+          setPlaying(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, [TOTAL]);
 
   // Master clock — rAF based, plays once, no loop.
