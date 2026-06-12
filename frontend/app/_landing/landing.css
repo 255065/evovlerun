@@ -129,7 +129,7 @@
 .evr-landing .hero {
   position: relative;
   max-width: 1180px; margin: 0 auto;
-  padding: 190px 24px 90px;
+  padding: 124px 24px 36px;
   text-align: center;
   overflow: visible;
 }
@@ -161,19 +161,19 @@
   50% { box-shadow: 0 0 0 5px rgba(37,163,90,0); }
 }
 .evr-landing .hero h1 {
-  margin: 26px auto 0; max-width: 14ch;
+  margin: 22px auto 0; max-width: 14ch;
   font-family: var(--font-serif); font-weight: 500;
-  font-size: clamp(46px, 8vw, 92px); line-height: 0.96; letter-spacing: -0.035em;
+  font-size: clamp(42px, 6.6vw, 74px); line-height: 0.98; letter-spacing: -0.035em;
   text-wrap: balance;
 }
 .evr-landing .hero h1 em { font-style: normal; }
 .evr-landing .hero p.sub {
-  margin: 28px auto 0; max-width: 36rem;
-  font-size: clamp(16px, 2vw, 19.5px); line-height: 1.55; color: var(--ink-2);
+  margin: 22px auto 0; max-width: 34rem;
+  font-size: clamp(15.5px, 1.8vw, 18px); line-height: 1.5; color: var(--ink-2);
   text-wrap: pretty;
 }
-.evr-landing .hero-cta { margin-top: 36px; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
-.evr-landing .hero-note { margin: 22px auto 0; max-width: 40rem; font-size: 14.5px; line-height: 1.5; color: var(--ink-3); text-wrap: pretty; }
+.evr-landing .hero-cta { margin-top: 28px; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.evr-landing .hero-note { margin: 18px auto 0; max-width: 40rem; font-size: 14px; line-height: 1.5; color: var(--ink-3); text-wrap: pretty; }
 
 /* connector — Strava → Claude */
 .evr-landing .connector { margin-top: 56px; }
@@ -222,8 +222,8 @@
    ============================================================ */
 .evr-landing .demo-section {
   position: relative;
-  --stack-reserve: 720px;
-  padding: 10px 24px 56px;
+  --stack-reserve: 580px;
+  padding: 0 24px 56px;
   background:
     radial-gradient(900px 600px at 50% 0%, rgba(204,120,92,0.10), transparent 60%);
 }
@@ -274,7 +274,12 @@
 .evr-landing .win-url svg { display: none; }
 
 /* chat surface */
-.evr-landing .chat { position: relative; padding: 18px 22px 18px; }
+.evr-landing .chat { position: relative; padding: 18px 22px 18px; min-height: var(--chat-reserve, 820px); }
+.evr-landing .chat-greet { animation: greetIn 0.9s var(--ease) both; }
+.evr-landing .chat .msg-prompt { animation: chatPop 0.6s var(--ease) 0.55s both; }
+.evr-landing .chat .stack { animation: chatPop 0.5s var(--ease) 0.8s both; }
+@keyframes greetIn { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes chatPop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .evr-landing .chat-greet { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px 0 18px; }
 .evr-landing .chat-greet svg { width: 26px; height: 26px; color: var(--accent); flex-shrink: 0; }
 .evr-landing .chat-greet .g {
@@ -661,7 +666,7 @@
 .evr-landing .card h3 { font-size: 22px; }
 
   /* demo window — fill width, tighter, taller reserve for wrapped content */
-.evr-landing .demo-section { --stack-reserve: 0px; padding: 6px 16px 48px; }
+.evr-landing .demo-section { --stack-reserve: 0px; --chat-reserve: 0px; padding: 6px 16px 48px; }
 .evr-landing .demo-section::before, .evr-landing .player::before { opacity: 0.6; }
 .evr-landing .window { border-radius: 16px; }
 .evr-landing .win-bar { padding: 10px 12px; }

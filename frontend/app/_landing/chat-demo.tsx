@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ClaudeStar, CalloutIcon } from "./icons";
+import { ClaudeStar } from "./icons";
 import { VizPace } from "./viz";
 
 // The demo plays like a short product video: a prompt types itself, tools
@@ -11,7 +11,7 @@ import { VizPace } from "./viz";
 // scrolled into view and rests on the final frame.
 
 const SEG = 7200; // ms in the (single) prompt segment
-const T = { typeStart: 250, typeEnd: 1400, think: 1650, tools: 2500, chart: 3700, summary: 5100 };
+const T = { typeStart: 900, typeEnd: 2050, think: 2300, tools: 3150, chart: 4350, summary: 5750 };
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 // eased reveal 0..1 over `dur` starting at `start`, given local elapsed `e`
@@ -37,26 +37,18 @@ const SEGMENT = {
   cards: [
     {
       label: "What changed",
-      body: "Your easy-run pace improved each month while average easy HR dropped, which usually points to stronger aerobic efficiency rather than simply running harder.",
+      body: "Pace improved every month while easy-run HR dropped — a clear sign your aerobic engine is getting stronger, not just that you ran harder.",
     },
     {
       label: "How Claude knows",
-      body: "It grouped easy runs using your training zones, compared month-by-month pace and HR, and then summarized the direction of change for you.",
+      body: "Your easy runs were grouped by month using your training zones, then pace and HR were compared across January, February and March.",
     },
   ] as Card[],
   coach:
-    "Your easy pace trend is moving the right way: from roughly 5:23/km in January to 5:08/km in March, while easy HR fell from about 149 bpm to 145 bpm, which suggests improving aerobic efficiency.",
+    "Your easy pace trend is moving in the right way: from roughly 5:23/km in January to 5:08/km in March, while easy HR fell from 149 bpm to 145 bpm, which suggests improving aerobic efficiency.",
 };
 
 type Phase = "type" | "think" | "tools" | "chart" | "summary";
-
-const CALLOUTS: Record<Phase, { t: string; top: number; icon: "activity" | "tool" | "chart" | "spark" } | null> = {
-  type: null,
-  think: { t: "Reads your data", top: 96, icon: "activity" },
-  tools: { t: "Runs the tools", top: 188, icon: "tool" },
-  chart: { t: "Charts it live", top: 280, icon: "chart" },
-  summary: { t: "Explains it plainly", top: 372, icon: "spark" },
-};
 
 export function ChatDemo() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -89,7 +81,7 @@ export function ChatDemo() {
     const check = () => {
       const vh = window.innerHeight || 800;
       const r = el.getBoundingClientRect();
-      const inView = r.top < vh * 0.92 && r.bottom > vh * 0.05;
+      const inView = r.top < vh * 0.72 && r.bottom > vh * 0.05;
       if (inView && !startedRef.current) {
         startedRef.current = true;
         setShown(true);
@@ -150,9 +142,6 @@ export function ChatDemo() {
   const oChart = e >= T.chart;
   const oCoach = rise(e, T.summary, 450);
 
-  const callout = CALLOUTS[phase];
-  const calloutOp = phase === "type" ? 0 : 1;
-
   const fadeStyle = (factor: number, dy = 8) => ({
     opacity: factor,
     transform: `translateY(${(1 - factor) * dy}px)`,
@@ -161,15 +150,6 @@ export function ChatDemo() {
   return (
     <section className="demo-section" id="demo">
       <div ref={wrapRef} className={"player" + (shown ? " in" : "")}>
-        {callout && (
-          <div className="callout" style={{ top: callout.top, ...fadeStyle(calloutOp, 14) }}>
-            <span className="ic">
-              <CalloutIcon kind={callout.icon} />
-            </span>
-            {callout.t}
-          </div>
-        )}
-
         <div className="window">
           <div className="win-bar">
             <div className="win-traffic">
@@ -186,6 +166,8 @@ export function ChatDemo() {
           </div>
 
           <div className="chat">
+            {shown && (
+              <>
             <div className="chat-greet">
               <ClaudeStar />
               <span className="g">{SEGMENT.greet}</span>
@@ -267,9 +249,11 @@ export function ChatDemo() {
                   );
                 })}
             </div>
+              </>
+            )}
           </div>
 
-          <div className="coach" style={{ opacity: oCoach }}>
+          <div className="coach" style={{ opacity: shown ? oCoach : 0 }}>
             {SEGMENT.coach}
           </div>
         </div>
