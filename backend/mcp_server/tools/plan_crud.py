@@ -10,6 +10,7 @@ Tuesday"). delete removes a session by id.
 
 import math
 import os
+import re
 from datetime import date
 from typing import Any
 
@@ -22,6 +23,172 @@ VALID_SESSION_TYPES = (
     "fartlek", "hills", "recovery", "race", "strength",
     "cross_training", "rest",
 )
+
+SESSION_TYPE_ALIASES = {
+    "easy_run": "easy",
+    "easy-run": "easy",
+    "easy run": "easy",
+    "rolig": "easy",
+    "roligt": "easy",
+    "roligt_loeb": "easy",
+    "roligt_lob": "easy",
+    "long_run": "long",
+    "long-run": "long",
+    "long run": "long",
+    "langtur": "long",
+    "recovery_run": "recovery",
+    "recovery-run": "recovery",
+    "recovery run": "recovery",
+    "restitution": "recovery",
+    "restitutionsloeb": "recovery",
+    "restitutionslob": "recovery",
+    "threshold_run": "threshold",
+    "threshold-run": "threshold",
+    "threshold run": "threshold",
+    "taerskel": "threshold",
+    "tærskel": "threshold",
+    "tempo_run": "tempo",
+    "tempo-run": "tempo",
+    "tempo run": "tempo",
+    "interval": "intervals",
+    "interval_run": "intervals",
+    "interval-run": "intervals",
+    "interval run": "intervals",
+    "intervaller": "intervals",
+    "vo2": "vo2max",
+    "vo2_max": "vo2max",
+    "vo2-max": "vo2max",
+    "vo2 max": "vo2max",
+    "hill": "hills",
+    "hill_repeats": "hills",
+    "hill-repeats": "hills",
+    "hill repeats": "hills",
+    "bakke": "hills",
+    "bakker": "hills",
+    "strength_training": "strength",
+    "strength-training": "strength",
+    "strength training": "strength",
+    "styrke": "strength",
+    "cross-training": "cross_training",
+    "cross training": "cross_training",
+    "crosstraining": "cross_training",
+    "easyride": "cross_training",
+    "rest_day": "rest",
+    "rest-day": "rest",
+    "rest day": "rest",
+    "hvile": "rest",
+    "hviledag": "rest",
+}
+
+SPORT_ALIASES = {
+    "run": "running",
+    "runs": "running",
+    "løb": "running",
+    "lob": "running",
+    "bike": "cycling",
+    "ride": "cycling",
+    "cykel": "cycling",
+    "swim": "swimming",
+    "svømning": "swimming",
+    "svomning": "swimming",
+    "gym": "strength",
+}
+
+# Ordered most-specific/dominant root first. Last-resort fuzzy fallback when
+# neither an exact alias nor a canonical match is found: catches LLM-invented
+# names like "speed_intervals", "long_slow_distance", "progression_easy" by
+# the root keyword they contain. Truly ambiguous names (no root here) stay
+# unmapped → caller raises a clear error (all-or-nothing).
+SESSION_TYPE_KEYWORDS = (
+    ("vo2", "vo2max"),
+    ("interval", "intervals"),
+    ("intervaller", "intervals"),
+    ("threshold", "threshold"),
+    ("tærskel", "threshold"),
+    ("taerskel", "threshold"),
+    ("tempo", "tempo"),
+    ("fartlek", "fartlek"),
+    ("hill", "hills"),
+    ("bakke", "hills"),
+    ("recovery", "recovery"),
+    ("restitution", "recovery"),
+    ("langtur", "long"),
+    ("lsd", "long"),
+    ("long", "long"),
+    ("rolig", "easy"),
+    ("easy", "easy"),
+    ("race", "race"),
+    ("styrke", "strength"),
+    ("strength", "strength"),
+    ("cross", "cross_training"),
+    ("hvile", "rest"),
+    ("rest", "rest"),
+)
+
+
+def _slug(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value).strip().lower().replace("_", " "))
+
+
+def _normalise_session_type(value: Any) -> str | None:
+    if value is None:
+        return None
+    raw = str(value).strip()
+    compact = raw.lower()
+    spaced = _slug(raw)
+    underscored = spaced.replace(" ", "_")
+    exact = (
+        SESSION_TYPE_ALIASES.get(compact)
+        or SESSION_TYPE_ALIASES.get(spaced)
+        or SESSION_TYPE_ALIASES.get(underscored)
+        or (underscored if underscored in VALID_SESSION_TYPES else None)
+    )
+    if exact:
+        return exact
+    # Fuzzy fallback: map LLM-invented names via a known root keyword.
+    for kw, canon in SESSION_TYPE_KEYWORDS:
+        if kw in compact:
+            return canon
+    return None
+
+
+def _normalise_sport(value: Any) -> str:
+    if value is None:
+        return "running"
+    spaced = _slug(value)
+    underscored = spaced.replace(" ", "_")
+    return SPORT_ALIASES.get(spaced) or SPORT_ALIASES.get(underscored) or underscored
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        match = re.search(r"\d+(?:[.,]\d+)?", value)
+        if not match:
+            return None
+        value = match.group(0).replace(",", ".")
+    return round(float(value))
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, str):
+        match = re.search(r"\d+(?:[.,]\d+)?", value)
+        if not match:
+            return None
+        value = match.group(0).replace(",", ".")
+    return float(value)
+
+
+def _distance_m(session: dict[str, Any]) -> int | None:
+    if session.get("distance_m") is not None:
+        return _optional_int(session.get("distance_m"))
+    if session.get("distance_km") is not None:
+        km = _optional_float(session.get("distance_km"))
+        return round(km * 1000) if km is not None else None
+    return None
 
 
 def push_planned_workout(
@@ -58,7 +225,8 @@ def push_planned_workout(
     except ValueError as exc:
         return {"error": f"scheduled_date must be YYYY-MM-DD ({exc})"}
 
-    if session_type not in VALID_SESSION_TYPES:
+    normalised_type = _normalise_session_type(session_type)
+    if normalised_type not in VALID_SESSION_TYPES:
         return {
             "error": f"session_type must be one of {list(VALID_SESSION_TYPES)}",
         }
@@ -88,10 +256,10 @@ def push_planned_workout(
         "plan_id": plan_id,
         "user_id": user_id,
         "scheduled_date": d.isoformat(),
-        "session_type": session_type,
-        "sport": sport,
-        "duration_min": duration_min,
-        "distance_m": distance_m,
+        "session_type": normalised_type,
+        "sport": _normalise_sport(sport),
+        "duration_min": _optional_int(duration_min),
+        "distance_m": _optional_int(distance_m),
         "description": description,
         "rationale": rationale,
         "status": "scheduled",
@@ -103,8 +271,8 @@ def push_planned_workout(
         "ok": True,
         "id": new_id,
         "scheduled_date": d.isoformat(),
-        "session_type": session_type,
-        "sport": sport,
+        "session_type": normalised_type,
+        "sport": _normalise_sport(sport),
         "plan_id": plan_id,
     }
 
@@ -132,9 +300,14 @@ def save_training_plan(
 
     Args:
         sessions: List of dicts. Each session needs at least
-            `scheduled_date` (YYYY-MM-DD) and `session_type`. Optional:
-            `sport`, `duration_min`, `distance_m`, `description`,
-            `rationale`, `intensity_zones` (dict).
+            `scheduled_date` (YYYY-MM-DD) and `session_type`. Canonical
+            session_type values are: easy, long, tempo, threshold, intervals,
+            vo2max, fartlek, hills, recovery, race, strength, cross_training,
+            rest. Common aliases like easy_run, long_run, recovery_run,
+            "easy run", "langtur", and "restitution" are accepted and stored
+            as the canonical value. Optional: `sport`, `duration_min`,
+            `distance_m` (or `distance_km`), `description`, `rationale`,
+            `intensity_zones` (dict).
         mode: "append" or "replace_window".
         window_start: ISO date YYYY-MM-DD. Required for replace_window.
         window_end: ISO date YYYY-MM-DD. Required for replace_window.
@@ -160,8 +333,12 @@ def save_training_plan(
         if "scheduled_date" not in s or "session_type" not in s:
             errors.append(f"session {i}: missing scheduled_date or session_type")
             continue
-        if s["session_type"] not in VALID_SESSION_TYPES:
-            errors.append(f"session {i}: invalid session_type {s['session_type']!r}")
+        normalised_type = _normalise_session_type(s["session_type"])
+        if normalised_type not in VALID_SESSION_TYPES:
+            errors.append(
+                f"session {i}: invalid session_type {s['session_type']!r}; "
+                f"use one of {list(VALID_SESSION_TYPES)}"
+            )
             continue
         try:
             d = date.fromisoformat(s["scheduled_date"])
@@ -171,10 +348,10 @@ def save_training_plan(
         rows.append({
             "user_id": user_id,
             "scheduled_date": d.isoformat(),
-            "session_type": s["session_type"],
-            "sport": s.get("sport") or "running",
-            "duration_min": s.get("duration_min"),
-            "distance_m": s.get("distance_m"),
+            "session_type": normalised_type,
+            "sport": _normalise_sport(s.get("sport")),
+            "duration_min": _optional_int(s.get("duration_min")),
+            "distance_m": _distance_m(s),
             "description": s.get("description"),
             "rationale": s.get("rationale"),
             "intensity_zones": s.get("intensity_zones") or {},
@@ -186,7 +363,7 @@ def save_training_plan(
             }],
         })
 
-    if not rows:
+    if errors:
         return {"ok": False, "errors": errors}
 
     # Find the newest active plan to attach sessions to.

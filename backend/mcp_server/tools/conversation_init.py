@@ -157,6 +157,15 @@ ONE call with the full sessions array. The tool is atomic and idempotent —
 calling it per-session breaks transactionality and creates duplicate rows
 on retry.
 
+Each session's `session_type` MUST be one of these canonical values:
+`easy`, `long`, `tempo`, `threshold`, `intervals`, `vo2max`, `fartlek`,
+`hills`, `recovery`, `race`, `strength`, `cross_training`, `rest`.
+Aliases like `easy_run`, `long_run`, `recovery_run`, `langtur`, or
+`restitution` are accepted and normalised server-side, but the canonical
+values above are preferred. The save is all-or-nothing: if even one
+session_type can't be recognised, NOTHING is written and the tool returns
+an error listing the bad rows — fix them and call once more.
+
 After saving, ALWAYS tell the user in plain text:
 
 > "✅ Saved. You can see it at <dashboard_url> under Training."
