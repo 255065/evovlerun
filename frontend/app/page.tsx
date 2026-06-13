@@ -1,6 +1,6 @@
 import "./_landing/landing.css";
 import { Nav } from "./_landing/nav";
-import { Hero, HowItWorks, Features, Pricing, CTA, Footer } from "./_landing/sections";
+import { Hero, HowItWorks, Features, CTA, Footer } from "./_landing/sections";
 import { ChatDemo } from "./_landing/chat-demo";
 import { RevealController } from "./_landing/reveal-controller";
 
@@ -27,7 +27,6 @@ export default async function LandingPage({
         <ChatDemo />
         <HowItWorks />
         <Features />
-        <Pricing />
         <CTA />
       </main>
       <Footer />

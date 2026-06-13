@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Brand } from "./icons";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const base = pathname === "/" ? "" : "/";
+
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
     on();
@@ -16,14 +20,14 @@ export function Nav() {
   return (
     <div className="nav-wrap">
       <nav className={"nav" + (scrolled ? " scrolled" : "")}>
-        <a className="nav-brand" href="#top" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link className="nav-brand" href="/" style={{ textDecoration: "none", color: "inherit" }}>
           <Brand /> EvolveRun
-        </a>
+        </Link>
         <div className="nav-links">
-          <a href="#demo">Demo</a>
-          <a href="#how">How it works</a>
-          <a href="#features">Why it&apos;s different</a>
-          <a href="#pricing">Pricing</a>
+          <a href={`${base}#demo`}>Demo</a>
+          <a href={`${base}#how`}>How it works</a>
+          <a href={`${base}#features`}>Why it&apos;s different</a>
+          <Link href="/pricing" className={pathname === "/pricing" ? "nav-link-active" : ""}>Pricing</Link>
         </div>
         <div className="nav-cta">
           <Link className="btn btn-ghost" href="/login">
