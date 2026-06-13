@@ -15,8 +15,11 @@ export function Nav() {
   const items: { href: string; label: string }[] = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/training", label: "Training" },
+    { href: "/dashboard/mcp", label: "Setup" },
     { href: "/dashboard/account", label: "Account" },
   ];
+  const isActive = (href: string) =>
+    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
     <header className="border-b border-neutral-200/70">
@@ -32,21 +35,15 @@ export function Nav() {
           EvolveRun
         </Link>
         <nav className="hidden gap-8 text-[14px] text-neutral-700 md:flex">
-          {items.map((it) => {
-            const active =
-              it.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname.startsWith(it.href);
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={active ? "font-medium text-neutral-950" : "hover:text-neutral-950"}
-              >
-                {it.label}
-              </Link>
-            );
-          })}
+          {items.map((it) => (
+            <Link
+              key={it.href}
+              href={it.href}
+              className={isActive(it.href) ? "font-medium text-neutral-950" : "hover:text-neutral-950"}
+            >
+              {it.label}
+            </Link>
+          ))}
         </nav>
         <form action={logoutAction}>
           <button
@@ -57,6 +54,28 @@ export function Nav() {
           </button>
         </form>
       </div>
+
+      {/* Mobile tab bar — always-visible horizontal strip (Chirona pattern).
+          Desktop hides this; the centered links above take over at md+. */}
+      <nav
+        className="flex gap-1 overflow-x-auto px-3 pb-2 md:hidden [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {items.map((it) => (
+          <Link
+            key={it.href}
+            href={it.href}
+            className={
+              "whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13.5px] transition " +
+              (isActive(it.href)
+                ? "bg-neutral-950 font-medium text-white"
+                : "text-neutral-500 hover:text-neutral-950")
+            }
+          >
+            {it.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }
