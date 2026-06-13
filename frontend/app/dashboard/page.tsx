@@ -84,7 +84,7 @@ export default async function DashboardPage() {
       <SectionLabel className="mt-16">Connected sources</SectionLabel>
       <Row
         icon={
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#fc5200]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fc5200]">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="#fff">
               <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
             </svg>
@@ -93,8 +93,8 @@ export default async function DashboardPage() {
         title="Strava"
         desc={
           connected
-            ? "Synced — webhook listening for new activities"
-            : "Not connected — link Strava to sync your runs"
+            ? "Listening for new activities"
+            : "Link Strava to sync your runs"
         }
         right={
           connected ? (
@@ -158,7 +158,7 @@ export default async function DashboardPage() {
 
       {/* This week */}
       <SectionLabel className="mt-16">This week</SectionLabel>
-      <div className="mt-4 grid grid-cols-3 gap-4">
+      <div className="mt-4 grid grid-cols-3 gap-2.5 sm:gap-4">
         <StatCard label="Activities" value={String(week.activities)} />
         <StatCard label="Total km" value={week.km.toFixed(1)} />
         <StatCard label="Total hours" value={week.hours.toFixed(1)} />
@@ -219,24 +219,28 @@ function Row({
   right: React.ReactNode;
 }) {
   return (
-    <div className="mt-4 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-4">
-      <div className="flex items-center gap-4">
+    <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-4 sm:px-5">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         {icon}
-        <div>
+        <div className="min-w-0">
           <div className="text-[15px] font-semibold">{title}</div>
           <div className="text-[13px] text-neutral-600">{desc}</div>
         </div>
       </div>
-      {right}
+      <div className="shrink-0">{right}</div>
     </div>
   );
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-      <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-neutral-500">{label}</div>
-      <div className="mt-2 text-[28px] font-semibold tracking-[-0.02em]">{value}</div>
+    <div className="rounded-2xl border border-neutral-200 bg-white p-3.5 sm:p-5">
+      {/* Reserve ~2 label lines on mobile so the values align even when a
+          label like "Total hours" wraps in the narrow column. */}
+      <div className="flex min-h-[2.5em] items-start font-mono text-[9.5px] uppercase leading-tight tracking-[0.08em] text-neutral-500 sm:min-h-0 sm:text-[10.5px] sm:tracking-[0.16em]">
+        {label}
+      </div>
+      <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] sm:mt-2 sm:text-[28px]">{value}</div>
     </div>
   );
 }
