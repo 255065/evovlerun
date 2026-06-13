@@ -22,7 +22,7 @@ export function ProfileForm({
 
   return (
     <form action={action} className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="First name">
           <input
             name="first_name"
