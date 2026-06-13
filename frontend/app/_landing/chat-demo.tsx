@@ -66,8 +66,13 @@ export function ChatDemo() {
     const el = wrapRef.current;
     if (!el) return;
 
+    // Skip the 7.2s rAF animation for reduced-motion users AND on phones: the
+    // per-frame React re-render was janky on mobile, and the scroll-trigger
+    // mis-fired on the tall player. We jump straight to the fully-composed
+    // final frame instead — the whole conversation is still shown, just static.
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
+    const isMobile = window.matchMedia?.("(max-width: 760px)").matches;
+    if (reduce || isMobile) {
       startedRef.current = true;
       elapsedRef.current = TOTAL - 1;
       // Defer out of the synchronous effect body to the next frame.

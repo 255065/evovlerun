@@ -60,7 +60,8 @@ star; V1 is the wedge.
 - **Integrations (V2)**: Garmin official partner, Oura, WHOOP, Polar
   AccessLink — all gratis OAuth, no aggregator.
 - **Payments**: Stripe Checkout, subscription model.
-- **Email**: Resend (deferred — needed before public launch).
+- **Email**: Resend. API key configured in `backend/.env` and as Railway
+  env var (`RESEND_API_KEY`). Ready to use.
 - **Cron**: Railway scheduled jobs (deferred — performance recompute
   runs after each sync today, that's enough for V1).
 
@@ -81,6 +82,20 @@ evolverun/
 - MCP endpoint: `https://evovlerun-production.up.railway.app/mcp`
 - GitHub: `255065/evovlerun` (note: 3 v's in the name — typo, can be
   renamed later without breaking anything)
+
+## Claude Code production access (CLI tools available in this session)
+Claude can make live production changes directly via these CLIs:
+
+| Tool | CLI | Notes |
+|------|-----|-------|
+| Railway | `railway` v4.66.0 | Deploy, set env vars, view logs |
+| Vercel | `vercel` | Deploy frontend, set env vars |
+| GitHub | `gh` v2.86.0 | PRs, issues, branches |
+| Supabase | MCP server | Direct DB access — requires Claude Code restart to activate |
+| Resend | `resend` CLI | Email — API key set in `.env` + Railway |
+
+To deploy backend: commit to `v1-prelaunch` → merge into `main` → `git push origin main` → Railway auto-deploys via GitHub.
+To deploy frontend: `cd ~/dev/evolverun/frontend && vercel --prod`
 
 ## Coding rules
 1. Think Before Coding

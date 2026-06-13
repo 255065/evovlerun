@@ -16,6 +16,7 @@ async function getToken(): Promise<string> {
 }
 
 export type ProfileFormState = { ok: boolean; error?: string };
+export type PasswordFormState = { ok: boolean; error?: string };
 
 /**
  * Persist the First / Last name fields. We store as a single full_name
@@ -44,6 +45,49 @@ export async function saveProfileAction(
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/dashboard/account");
+  return { ok: true };
+}
+
+export async function changePasswordAction(
+  _prev: PasswordFormState,
+  formData: FormData,
+): Promise<PasswordFormState> {
+  const currentPassword = String(formData.get("current_password") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!currentPassword) {
+    return { ok: false, error: "Enter your current password." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  if (password !== confirm) {
+    return { ok: false, error: "Passwords don't match." };
+  }
+  if (currentPassword === password) {
+    return { ok: false, error: "Choose a new password that is different from your current one." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+  if (!user.email) return { ok: false, error: "This account does not have an email password login." };
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) {
+    return { ok: false, error: "Current password is incorrect." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

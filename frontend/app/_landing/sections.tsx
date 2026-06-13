@@ -16,8 +16,8 @@ export function Hero() {
         Understand your <em className="grad-text">training with AI.</em>
       </h1>
       <p className="sub reveal d2">
-        Connect your Strava account to ChatGPT or Claude and get deeper insights into your
-        workouts, recovery, fitness trends, and performance — using your real training data.
+        Connect Strava to Claude or ChatGPT for real answers about your training, recovery and
+        fitness — from your own data.
       </p>
       <div className="hero-cta reveal d3">
         <Link className="btn btn-dark btn-lg" href="/signup">
@@ -252,9 +252,10 @@ export function Footer() {
         <div className="footer-cols">
           <div className="footer-col">
             <h4>Product</h4>
-            <a href="#demo">Demo</a>
-            <a href="#how">How it works</a>
-            <a href="#features">Why it&apos;s different</a>
+            <Link href="/#demo">Demo</Link>
+            <Link href="/#how">How it works</Link>
+            <Link href="/#features">Why it&apos;s different</Link>
+            <Link href="/pricing">Pricing</Link>
           </div>
           <div className="footer-col">
             <h4>Company</h4>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { loadBillingStatus, openBillingPortalAction, startCheckoutAction } from "./actions";
+import { ChangePasswordForm } from "./change-password-form";
 import { DeleteAccountButton } from "./delete-button";
 import { ProfileForm } from "./profile-form";
 
@@ -76,6 +77,11 @@ export default async function AccountPage({
           lastName={lastName}
           email={user?.email ?? ""}
         />
+      </Section>
+
+      {/* ─── Security ─────────────────────────────────────── */}
+      <Section eyebrow="Security">
+        <ChangePasswordForm />
       </Section>
 
       {/* ─── Plan ──────────────────────────────────────────── */}
