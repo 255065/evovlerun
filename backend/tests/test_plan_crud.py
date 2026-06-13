@@ -155,6 +155,94 @@ def test_existing_active_plan_reused(patch_client):
     assert all(r["plan_id"] == EXISTING_PLAN_ID for r in pw_inserts[0])
 
 
+def test_chatgpt_session_type_aliases_are_normalised(patch_client):
+    client = patch_client(
+        FakeClient(select_returns={"training_plans": [{"id": EXISTING_PLAN_ID}]})
+    )
+    sessions = [
+        _session("2026-06-01", "easy_run", distance_km="8 km"),
+        _session("2026-06-02", "long_run", sport="run"),
+        _session("2026-06-03", "recovery_run"),
+        _session("2026-06-04", "langtur"),
+        _session("2026-06-05", "restitution"),
+    ]
+
+    result = plan_crud.save_training_plan(sessions=sessions, mode="append")
+
+    assert result["ok"] is True
+    rows = client.inserts_for("planned_workouts")[0]
+    assert [r["session_type"] for r in rows] == [
+        "easy",
+        "long",
+        "recovery",
+        "long",
+        "recovery",
+    ]
+    assert rows[0]["distance_m"] == 8000
+    assert rows[1]["sport"] == "running"
+
+
+def test_mixed_invalid_sessions_write_nothing(patch_client):
+    client = patch_client(
+        FakeClient(select_returns={"training_plans": [{"id": EXISTING_PLAN_ID}]})
+    )
+    sessions = [
+        _session("2026-06-01", "easy"),
+        _session("2026-06-02", "qwerty_session"),
+    ]
+
+    result = plan_crud.save_training_plan(sessions=sessions, mode="append")
+
+    assert result["ok"] is False
+    assert "invalid session_type" in result["errors"][0]
+    assert client.inserts_for("training_plans") == []
+    assert client.inserts_for("planned_workouts") == []
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("speed_intervals", "intervals"),
+        ("long_slow_distance", "long"),
+        ("easy recovery jog", "recovery"),  # recovery ordered before easy
+        ("VO2 max repeats", "vo2max"),
+        ("hill sprints", "hills"),
+        ("threshold tempo blend", "threshold"),  # threshold ordered before tempo
+        ("rolig restitution", "recovery"),
+        ("qwerty_session", None),  # no known root → unmapped
+    ],
+)
+def test_fuzzy_session_type_fallback(raw, expected):
+    assert plan_crud._normalise_session_type(raw) == expected
+
+
+def test_original_bug_week_saves_all_five(patch_client):
+    """The exact week from the bug report: a mix of canonical types and the
+    rejected aliases (easy_run/long_run/recovery_run). All 5 must now save."""
+    client = patch_client(
+        FakeClient(select_returns={"training_plans": [{"id": EXISTING_PLAN_ID}]})
+    )
+    sessions = [
+        _session("2026-06-15", "easy_run"),
+        _session("2026-06-16", "intervals"),
+        _session("2026-06-18", "threshold"),
+        _session("2026-06-20", "long_run"),
+        _session("2026-06-21", "recovery_run"),
+    ]
+
+    result = plan_crud.save_training_plan(sessions=sessions, mode="append")
+
+    assert result["ok"] is True
+    rows = client.inserts_for("planned_workouts")[0]
+    assert [r["session_type"] for r in rows] == [
+        "easy",
+        "intervals",
+        "threshold",
+        "long",
+        "recovery",
+    ]
+
+
 def test_weeks_formula_multiweek(patch_client):
     client = patch_client(FakeClient(select_returns={"training_plans": []}))
     sessions = [_session("2026-06-01"), _session("2026-06-10")]
