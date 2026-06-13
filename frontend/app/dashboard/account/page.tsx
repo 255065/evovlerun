@@ -79,10 +79,10 @@ export default async function AccountPage({
         />
       </Section>
 
-      {/* ─── Security ─────────────────────────────────────── */}
-      <Section eyebrow="Security">
+      {/* ─── Change password (modal trigger, no section header) ── */}
+      <div className="border-t border-neutral-200 pt-6">
         <ChangePasswordForm />
-      </Section>
+      </div>
 
       {/* ─── Plan ──────────────────────────────────────────── */}
       <Section eyebrow="Plan">
