@@ -63,17 +63,12 @@
   letter-spacing: 0.18em;
 }
 
-/* ---------- Scroll reveal (translate-only so it stays visible even if
-   animations are frozen by the host; opacity never drops to 0) ---------- */
+/* ---------- Scroll reveal: intentionally a no-op. Cards/sections appear in
+   place (opacity: 1) with no slide-in animation — the scroll-reveal felt janky
+   on mobile, so it's removed everywhere. Button micro-interactions (.btn hover,
+   arrow translate) are unaffected. ---------- */
 .evr-landing .reveal { opacity: 1; }
-.evr-landing .reveal.in { animation: evrRise 0.85s var(--ease) both; }
-@keyframes evrRise { from { transform: translateY(24px); } to { transform: none; } }
-.reveal.d1 { animation-delay: 0.07s; }
-.evr-landing .reveal.d2 { animation-delay: 0.14s; }
-.evr-landing .reveal.d3 { animation-delay: 0.21s; }
-.evr-landing .reveal.d4 { animation-delay: 0.28s; }
 @media (prefers-reduced-motion: reduce) {
-.evr-landing .reveal.in { animation: none; }
 .evr-landing { scroll-behavior: auto; }
 }
 
@@ -646,7 +641,7 @@
 .evr-landing .btn { font-size: 13px; padding: 9px 15px; }
 
   /* hero */
-.evr-landing .hero { padding: 104px 20px 56px; }
+.evr-landing .hero { padding: 104px 20px 28px; }
 .evr-landing .hero-bloom { width: 130%; height: 420px; top: -20px; }
 .evr-landing .cta-bloom { left: 0; right: 0; }
 .evr-landing .hero h1 { font-size: clamp(38px, 12vw, 52px); line-height: 1.0; letter-spacing: -0.03em; max-width: 16ch; }
@@ -669,7 +664,9 @@
 .evr-landing .sec-rows { grid-template-columns: 1fr; }
 
   /* demo window — fill width, tighter, taller reserve for wrapped content */
-.evr-landing .demo-section { --stack-reserve: 0px; --chat-reserve: 0px; padding: 6px 16px 48px; }
+/* Reserve the demo's final height (measured at 390px) so the window stays full
+   size and the content animates within it instead of growing the box. */
+.evr-landing .demo-section { --stack-reserve: 867px; --chat-reserve: 1120px; padding: 6px 16px 48px; }
 .evr-landing .demo-section::before, .evr-landing .player::before { opacity: 0.6; }
 .evr-landing .window { border-radius: 16px; }
 .evr-landing .win-bar { padding: 10px 12px; }
@@ -682,7 +679,7 @@
 .evr-landing .msg-prompt .foot { margin-top: 18px; }
 .evr-landing .msg-prompt .send { width: 42px; height: 42px; border-radius: 13px; }
 .evr-landing .msg-prompt .send svg { width: 17px; height: 17px; }
-.evr-landing .stack { min-height: 0; gap: 9px; }
+.evr-landing .stack { min-height: var(--stack-reserve, 0px); gap: 9px; }
 .evr-landing .tools, .evr-landing .insight { padding: 14px 16px; }
 .evr-landing .tool-chip { font-size: 10.5px; padding: 5px 10px; }
 .evr-landing .insight-body { font-size: 13.5px; }
