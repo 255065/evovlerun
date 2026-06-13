@@ -66,13 +66,9 @@ export function ChatDemo() {
     const el = wrapRef.current;
     if (!el) return;
 
-    // Skip the 7.2s rAF animation for reduced-motion users AND on phones: the
-    // per-frame React re-render was janky on mobile, and the scroll-trigger
-    // mis-fired on the tall player. We jump straight to the fully-composed
-    // final frame instead — the whole conversation is still shown, just static.
+    // Reduced-motion users get the fully-composed final frame, no animation.
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const isMobile = window.matchMedia?.("(max-width: 760px)").matches;
-    if (reduce || isMobile) {
+    if (reduce) {
       startedRef.current = true;
       elapsedRef.current = TOTAL - 1;
       // Defer out of the synchronous effect body to the next frame.
@@ -83,8 +79,13 @@ export function ChatDemo() {
       return () => cancelAnimationFrame(id);
     }
 
-    // IntersectionObserver instead of a scroll listener: no per-scroll layout
-    // reads, so jumping here via the nav anchor stays smooth.
+    // Play once when the player is genuinely scrolled into view. On phones the
+    // player's top sits inside the initial viewport just under the hero, so a
+    // plain threshold fired on load; the negative bottom rootMargin holds the
+    // trigger until its top crosses ~65% of the viewport. Desktop keeps its
+    // original threshold (the demo is below the fold there, so it never
+    // mis-fired) to avoid changing proven behavior.
+    const isMobile = window.matchMedia?.("(max-width: 760px)").matches;
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting) && !startedRef.current) {
@@ -94,7 +95,7 @@ export function ChatDemo() {
           io.disconnect();
         }
       },
-      { threshold: 0.15 },
+      isMobile ? { rootMargin: "0px 0px -35% 0px", threshold: 0 } : { threshold: 0.15 },
     );
     io.observe(el);
     return () => io.disconnect();
