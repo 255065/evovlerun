@@ -220,6 +220,11 @@ async def stripe_webhook(
 
     log.info("Stripe webhook: %s (id=%s)", event["type"], event["id"])
 
+    # Initialise the SDK so subscription handlers can re-fetch the live object
+    # (Stripe delivers events out of order — see _on_subscription_upserted).
+    stripe.api_key = settings.stripe_secret_key
+    stripe.api_version = "2024-12-18.acacia"
+
     # Idempotency: record the event id before processing. If the event was
     # already processed (e.g. Stripe retry after a 5xx) the INSERT raises a
     # unique-key violation, which we treat as "already done" and return 200
@@ -303,6 +308,18 @@ def _on_checkout_completed(session_obj: dict[str, Any]) -> None:
 
 
 def _on_subscription_upserted(sub: dict[str, Any]) -> None:
+    # Stripe delivers `customer.subscription.created` (status "incomplete") and
+    # `.updated` (status "active") in the same instant and does NOT guarantee
+    # order. Trusting the event payload lets a late "created" event regress a
+    # live subscription back to "incomplete". Re-fetch the subscription so we
+    # always mirror its current status, independent of delivery order.
+    sub_id = sub.get("id")
+    if sub_id:
+        try:
+            sub = stripe.Subscription.retrieve(sub_id)
+        except stripe.StripeError as exc:  # fall back to the event payload
+            log.warning("Re-fetch of subscription %s failed: %s", sub_id, exc)
+
     customer_id = sub.get("customer")
     metadata = sub.get("metadata") or {}
     user_id = _user_id_for_customer(customer_id, metadata)
