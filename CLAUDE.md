@@ -97,6 +97,17 @@ Claude can make live production changes directly via these CLIs:
 To deploy backend: commit to `v1-prelaunch` → merge into `main` → `git push origin main` → Railway auto-deploys via GitHub.
 To deploy frontend: `cd ~/dev/evolverun/frontend && vercel --prod`
 
+## Changelog — keep `CHANGELOG.md` current
+After any **notable** change, add a one-line entry to `CHANGELOG.md` (repo root)
+under `## [Unreleased]`, grouped by **Added / Changed / Fixed / Ops**. Plain
+language, founder-readable.
+
+- **Log**: shipped features, bug fixes, infra / config / deploy changes, schema or
+  API changes, and product decisions.
+- **Don't log**: refactors with no behaviour change, typo / formatting fixes, WIP —
+  git history already covers those. The changelog is for recall, not a commit mirror.
+- When `[Unreleased]` entries ship, move them under a dated heading (`## 2026-06-21`).
+
 ## Coding rules
 1. Think Before Coding
 Don't assume. Don't hide confusion. Surface tradeoffs.
