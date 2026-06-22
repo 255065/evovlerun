@@ -94,12 +94,12 @@ export default async function AccountPage({
         </div>
         {periodEnd && (
           <p className="mt-1.5 text-[13.5px] text-neutral-600">
-            {isActive ? `Renews on ${periodEnd}. €9 per month.` : `Ended on ${periodEnd}.`}
+            {isActive ? `Renews on ${periodEnd}. €7.99 per month.` : `Ended on ${periodEnd}.`}
           </p>
         )}
         {!periodEnd && !isActive && (
           <p className="mt-1.5 text-[13.5px] text-neutral-600">
-            €9 per month. Cancel anytime.
+            €7.99 per month. Cancel anytime.
           </p>
         )}
 

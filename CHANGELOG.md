@@ -10,6 +10,10 @@ mirror of git history — see `CLAUDE.md` for what to log and what to skip.
 
 ## [Unreleased]
 
+### Fixed
+- Account page showed "€9 per month" while the actual price (and the rest of the
+  site — pricing, landing, terms) is **€7.99**. Corrected the account-page copy.
+
 ## 2026-06-21
 
 ### Added
