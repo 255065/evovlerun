@@ -13,6 +13,10 @@ mirror of git history — see `CLAUDE.md` for what to log and what to skip.
 ### Fixed
 - Account page showed "€9 per month" while the actual price (and the rest of the
   site — pricing, landing, terms) is **€7.99**. Corrected the account-page copy.
+- Dashboard mobile layout: the "Get set up" number badges rendered as ovals and
+  the Claude/ChatGPT coach icons were squished on narrow phones. Added the missing
+  flex constraints so badges/icons stay perfectly round/square and text wraps
+  cleanly.
 
 ## 2026-06-21
 

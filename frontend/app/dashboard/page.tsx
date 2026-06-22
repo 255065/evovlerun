@@ -177,8 +177,10 @@ export default async function DashboardPage() {
             key={p}
             className="flex items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-3"
           >
-            <div className="text-[14.5px] text-neutral-800">{p}</div>
-            <CopyButton text={p} />
+            <div className="min-w-0 text-[14.5px] text-neutral-800">{p}</div>
+            <span className="shrink-0">
+              <CopyButton text={p} />
+            </span>
           </div>
         ))}
       </div>
@@ -261,12 +263,12 @@ function CoachCard({
   connected: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-5">
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl" style={{ background: bg }}>
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-neutral-200 bg-white px-5 py-5">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" style={{ background: bg }}>
           {logo}
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-[15.5px] font-semibold">
             {name}
             {connected && (
@@ -280,7 +282,7 @@ function CoachCard({
       </div>
       <Link
         href={href}
-        className="rounded-md border border-neutral-300 bg-white px-3.5 py-1.5 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
+        className="shrink-0 whitespace-nowrap rounded-md border border-neutral-300 bg-white px-3.5 py-1.5 text-[13px] font-medium text-neutral-950 hover:bg-neutral-50"
       >
         {connected ? "Manage" : "Add"}
       </Link>
@@ -301,24 +303,24 @@ function ChecklistStep({
 }) {
   return (
     <li className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {done ? (
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
             <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12l5 5 9-9" />
             </svg>
           </span>
         ) : (
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#dc6b3f] text-xs font-semibold text-white">
+          <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#dc6b3f] text-xs font-semibold text-white">
             {n}
           </span>
         )}
-        <span className={"text-[14.5px] " + (done ? "text-neutral-400 line-through" : "text-neutral-800")}>
+        <span className={"min-w-0 text-[14.5px] " + (done ? "text-neutral-400 line-through" : "text-neutral-800")}>
           {label}
         </span>
       </div>
       {!done && (
-        <Link href={action.href} className="text-[13px] font-medium text-[#dc6b3f] hover:underline">
+        <Link href={action.href} className="shrink-0 whitespace-nowrap text-[13px] font-medium text-[#dc6b3f] hover:underline">
           {action.label} →
         </Link>
       )}
