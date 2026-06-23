@@ -21,6 +21,25 @@ export default function SignupPage() {
           EvolveRun
         </Link>
         <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+          {state.emailSent ? (
+            <div className="text-center">
+              <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Check your email</h1>
+              <p className="mt-3 text-[14.5px] text-neutral-600">
+                We sent a confirmation link to your inbox. Click it to verify your account, then
+                you&apos;ll set up your subscription.
+              </p>
+              <p className="mt-4 text-[13px] text-neutral-500">
+                Didn&apos;t get it? Check your spam folder.
+              </p>
+              <Link
+                href="/login"
+                className="mt-6 inline-block text-[13.5px] font-medium text-[#dc6b3f] hover:underline"
+              >
+                Back to log in
+              </Link>
+            </div>
+          ) : (
+            <>
           <h1 className="evr-headline text-[30px] tracking-[-0.03em]">Create your account</h1>
           <p className="mt-2 text-[14.5px] text-neutral-600">Start your adaptive training journey.</p>
           <form action={formAction} className="mt-6 space-y-4">
@@ -62,6 +81,8 @@ export default function SignupPage() {
               Log in
             </Link>
           </p>
+            </>
+          )}
         </div>
       </div>
     </div>

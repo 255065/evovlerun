@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = {
   error: string | null;
+  /** Set after signup when an email confirmation is required (no session yet). */
+  emailSent?: boolean;
 };
 
 export type ResetRequestState = {
@@ -48,11 +50,20 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
     return { error: "Password must be at least 8 characters." };
   }
 
+  // Land the confirmation link on the paywall, so a new user subscribes before
+  // the dashboard. Origin comes from the request so it's right in prod + preview.
+  const hdrs = await headers();
+  const host = hdrs.get("host") ?? "";
+  const proto = hdrs.get("x-forwarded-proto") ?? "https";
+  const emailRedirectTo = `${proto}://${host}/auth/callback?next=${encodeURIComponent(
+    "/dashboard/account?paywall=1",
+  )}`;
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: { data: { full_name: fullName }, emailRedirectTo },
   });
 
   if (error) {
@@ -60,7 +71,15 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+
+  // With "Confirm email" enabled, signUp returns no session until the link is
+  // clicked — show the check-your-inbox screen instead of bouncing to a
+  // protected route. If a session does exist (email confirmation disabled), go
+  // straight to the paywall rather than the dashboard.
+  if (!data.session) {
+    return { error: null, emailSent: true };
+  }
+  redirect("/dashboard/account?paywall=1");
 }
 
 export async function logoutAction() {

@@ -10,6 +10,14 @@ mirror of git history — see `CLAUDE.md` for what to log and what to skip.
 
 ## [Unreleased]
 
+### Added
+- Onboarding gate: new signups now must **confirm their email** and **start a
+  subscription before reaching the dashboard**. Signup shows a "check your email"
+  screen; the confirmation link lands on the paywall. The auth callback handles
+  both the PKCE (`code`) and OTP (`token_hash`) confirmation-link formats.
+  (Enabled by Supabase "Confirm email" + the `ENFORCE_SUBSCRIPTION` /
+  `NEXT_PUBLIC_ENFORCE_SUBSCRIPTION` flags.)
+
 ### Fixed
 - Account page showed "€9 per month" while the actual price (and the rest of the
   site — pricing, landing, terms) is **€7.99**. Corrected the account-page copy.
