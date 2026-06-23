@@ -21,6 +21,9 @@ limits>=3,<6
 # Error monitoring (no-op unless SENTRY_DSN is set).
 sentry-sdk[fastapi]>=2,<3
 
+# Transactional email.
+resend>=2,<3
+
 # MCP server. Pinned tightly: newer mcp versions (1.20+) bump starlette to
 # 1.0 which is incompatible with FastAPI < 0.120 — see commit message.
 mcp==1.13.1

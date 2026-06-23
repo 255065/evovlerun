@@ -98,17 +98,22 @@ export async function loadBillingStatus(): Promise<BillingStatus | null> {
 }
 
 /**
- * Kick off a Stripe Checkout session and redirect the browser to it. The
- * backend creates a single-tier subscription session and returns the URL —
- * we don't expose Stripe keys to the client at all.
+ * Kick off a Stripe Checkout session for the chosen plan and redirect the
+ * browser to it. Bound with a plan in the plan-picker form; defaults to monthly
+ * so any caller that omits it (or passes a FormData) still gets a valid plan.
+ * We don't expose Stripe keys to the client at all.
  */
-export async function startCheckoutAction() {
+export async function startCheckoutAction(plan: "monthly" | "yearly" = "monthly") {
+  const planParam = plan === "yearly" ? "yearly" : "monthly";
   const token = await getToken();
-  const res = await fetch(`${BACKEND_URL}/billing/create-checkout-session`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${BACKEND_URL}/billing/create-checkout-session?plan=${planParam}`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Checkout failed (${res.status}): ${text}`);

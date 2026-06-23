@@ -11,6 +11,12 @@ mirror of git history — see `CLAUDE.md` for what to log and what to skip.
 ## [Unreleased]
 
 ### Added
+- **Monthly / yearly plan picker** on the paywall: new users choose **Pro Monthly
+  €7.99** or **Pro Annual €69** before checkout, and the selected plan routes to its
+  own Stripe price. Checkout endpoint takes a `plan` param; adds `STRIPE_PRICE_ID_YEARLY`.
+- **Transactional billing emails** via Resend (`services/email.py`), sent best-effort
+  from the webhook so a failed send never blocks subscription mirroring. From
+  `noreply@evolverun.app` (domain verified).
 - Onboarding gate: new signups now must **confirm their email** and **start a
   subscription before reaching the dashboard**. Signup shows a "check your email"
   screen; the confirmation link lands on the paywall. The auth callback handles

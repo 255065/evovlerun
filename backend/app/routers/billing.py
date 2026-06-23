@@ -30,6 +30,7 @@ from app.config import Settings, get_settings
 from app.core.ratelimit import rate_limit
 from app.core.security import CurrentUser, get_current_user
 from app.core.supabase import get_supabase_admin
+from app.services.email import send_email
 
 log = logging.getLogger("evolverun.billing")
 
@@ -109,11 +110,17 @@ class StatusResponse(BaseModel):
 def create_checkout_session(
     user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
+    plan: str = "monthly",
 ) -> CheckoutResponse:
-    if not settings.stripe_price_id:
+    # Pick the price for the requested plan: "yearly" → Pro Annual, anything
+    # else → the monthly tier. Each plan needs its price configured.
+    price_id = (
+        settings.stripe_price_id_yearly if plan == "yearly" else settings.stripe_price_id
+    )
+    if not price_id:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="STRIPE_PRICE_ID is not configured",
+            detail=f"No Stripe price configured for plan '{plan}'",
         )
 
     client = _stripe_client(settings)
@@ -124,7 +131,7 @@ def create_checkout_session(
     session_obj = client.checkout.Session.create(
         mode="subscription",
         customer=customer_id,
-        line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
+        line_items=[{"price": price_id, "quantity": 1}],
         success_url=success_url,
         cancel_url=cancel_url,
         allow_promotion_codes=True,
@@ -261,6 +268,8 @@ def _handle_event(event: dict[str, Any]) -> None:
         _on_subscription_upserted(data)
     elif etype == "customer.subscription.deleted":
         _on_subscription_deleted(data)
+    elif etype == "invoice.payment_failed":
+        _on_payment_failed(data)
     else:
         log.debug("Ignoring Stripe event type %s", etype)
 
@@ -287,6 +296,26 @@ def _user_id_for_customer(customer_id: str | None, sub_metadata: dict[str, Any] 
     if row.data:
         return row.data[0]["id"]
     return None
+
+
+def _email_for_user(user_id: str) -> str | None:
+    supabase = get_supabase_admin()
+    row = supabase.table("profiles").select("email").eq("id", user_id).limit(1).execute()
+    if row.data:
+        return row.data[0].get("email")
+    return None
+
+
+def _notify(user_id: str, subject: str, html: str) -> None:
+    """Best-effort billing notice. A failed send must not fail the webhook —
+    Stripe's mirrored state is the part that has to land."""
+    email = _email_for_user(user_id)
+    if not email:
+        return
+    try:
+        send_email(to=email, subject=subject, html=html)
+    except Exception:
+        log.exception("Billing notification email failed for user %s", user_id)
 
 
 def _on_checkout_completed(session_obj: dict[str, Any]) -> None:
@@ -369,3 +398,24 @@ def _on_subscription_deleted(sub: dict[str, Any]) -> None:
             "subscription_current_period_end": None,
         }
     ).eq("id", user_id).execute()
+    _notify(
+        user_id,
+        "Your EvolveRun subscription has ended",
+        "<p>Your subscription was cancelled and access to EvolveRun has ended. "
+        "You can resubscribe any time from your account page.</p>",
+    )
+
+
+def _on_payment_failed(invoice: dict[str, Any]) -> None:
+    """Stripe already retries the charge (dunning); this just lets the user
+    know before access lapses. profiles.subscription_status is not changed
+    here — that mirror only happens on customer.subscription.updated."""
+    user_id = _user_id_for_customer(invoice.get("customer"))
+    if not user_id:
+        return
+    _notify(
+        user_id,
+        "We couldn't process your EvolveRun payment",
+        "<p>Your most recent payment failed. Please update your payment method "
+        "from your account page to keep your subscription active.</p>",
+    )

@@ -64,10 +64,17 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""
     stripe_price_id: str = ""
+    # Recurring yearly price (Pro Annual). When unset, only the monthly plan is
+    # offered; a checkout for plan="yearly" 503s until this is configured.
+    stripe_price_id_yearly: str = ""
     stripe_webhook_secret: str = ""
     # When True, /dashboard is hard-gated to subscribed users. Default False
     # for V1 alpha so the founder can ship without paying themselves.
     enforce_subscription: bool = False
+
+    # Resend — transactional email. Domain evolverun.app is verified.
+    resend_api_key: str = ""
+    resend_from_email: str = "EvolveRun <noreply@evolverun.app>"
 
     @property
     def cors_origin_list(self) -> list[str]:

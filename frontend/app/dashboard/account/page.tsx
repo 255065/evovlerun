@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { loadBillingStatus, openBillingPortalAction, startCheckoutAction } from "./actions";
+import { loadBillingStatus, openBillingPortalAction } from "./actions";
 import { ChangePasswordForm } from "./change-password-form";
 import { DeleteAccountButton } from "./delete-button";
+import { PlanPicker } from "./plan-picker";
 import { ProfileForm } from "./profile-form";
 
 export const dynamic = "force-dynamic";
@@ -70,6 +71,16 @@ export default async function AccountPage({
         </Banner>
       )}
 
+      {/* ─── Choose a plan (shown until subscribed) ─────────── */}
+      {!isActive && (
+        <section>
+          <div className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+            Choose your plan
+          </div>
+          <PlanPicker />
+        </section>
+      )}
+
       {/* ─── Profile ───────────────────────────────────────── */}
       <Section eyebrow="Profile">
         <ProfileForm
@@ -103,8 +114,8 @@ export default async function AccountPage({
           </p>
         )}
 
-        <div className="mt-4">
-          {isActive ? (
+        {isActive ? (
+          <div className="mt-4">
             <form action={openBillingPortalAction}>
               <button
                 type="submit"
@@ -113,17 +124,12 @@ export default async function AccountPage({
                 View billing
               </button>
             </form>
-          ) : (
-            <form action={startCheckoutAction}>
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-md bg-neutral-950 px-5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-neutral-800"
-              >
-                Start subscription
-              </button>
-            </form>
-          )}
-        </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-[12.5px] text-neutral-500">
+            Choose a plan above to subscribe.
+          </p>
+        )}
         {billing === null && (
           <p className="mt-3 text-[12.5px] text-amber-800">
             Billing status unavailable — Stripe may not be configured yet.
